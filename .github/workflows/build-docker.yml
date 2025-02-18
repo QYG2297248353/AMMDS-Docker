@@ -49,7 +49,7 @@ jobs:
           context: ./ammds-source
           file: ./ammds-source/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: |
             qyg2297248353/ammds:${{ github.ref_name }}
             qyg2297248353/ammds:latest
