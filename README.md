@@ -53,7 +53,7 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 ### 1. 获取 AMMDS
 - [官方网站](https://ammds.lifebus.top/)
 - [GitHub 项目](https://github.com/QYG2297248353/AMMDS-Docker)
-- [Docker Hub 镜像](https://hub.docker.com/r/QYG2297248353/AMMDS-Docker)
+- [Docker Hub 镜像](https://hub.docker.com/r/QYG2297248353/AMMDS)
 
 ### 2. 安装与配置
 - 按照平台指南下载并安装 AMMDS。
