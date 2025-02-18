@@ -1,4 +1,4 @@
-name: build docker X86 image
+name: build docker image
 on:
   push:
     branches:
