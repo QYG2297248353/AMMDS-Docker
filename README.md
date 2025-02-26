@@ -91,6 +91,12 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 如果你喜欢 AMMDS 或者它对你有所帮助，请考虑支持我们的项目！你的支持将帮助我们继续开发和维护 AMMDS，并提供更好的用户体验。
 
+## 🗣 官方群组
+
+- **Telegram**： [点击加入群组](https://t.me/+OgCuWhS93zczZjhl)
+
+<img src="https://github.com/user-attachments/assets/e16f7880-e8fe-465e-9e54-d770a32eac43" width="300"/>
+
 ---
 
 ## 📞 技术支持
