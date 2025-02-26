@@ -95,11 +95,11 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 - **Telegram**: [点击加入频道](https://t.me/+RI8xfJgcj9NkZmU1)
 
-<img src="https://github.com/user-attachments/assets/162e966b-b524-4c70-a0d3-4db2579702d4" width="300"/>
+<img src="https://github.com/user-attachments/assets/8f078ffc-49a7-460e-af38-03aa025b5104" width="300"/>
 
 - **Telegram Chat**： [点击加入群组](https://t.me/+OgCuWhS93zczZjhl)
 
-<img src="https://github.com/user-attachments/assets/e16f7880-e8fe-465e-9e54-d770a32eac43" width="300"/>
+<img src="https://github.com/user-attachments/assets/a1095f0c-57ca-42e5-a85e-cb11f6ce9121" width="300"/>
 
 ---
 
