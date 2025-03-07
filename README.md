@@ -103,6 +103,8 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 - **QQ群组**：[点击加入群组(443266144)](https://qm.qq.com/q/dZ0wTXdFCw)
 
+<img src="https://github.com/user-attachments/assets/ed8472c0-8aff-4b4f-bcca-dc0f35ff6174" width="300"/>
+
 ---
 
 ## 📞 技术支持
