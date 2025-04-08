@@ -95,15 +95,58 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 - **Telegram**: [点击加入频道](https://t.me/+RI8xfJgcj9NkZmU1)
 
-<img src="https://github.com/user-attachments/assets/8f078ffc-49a7-460e-af38-03aa025b5104" width="300"/>
+<img src="https://github.com/user-attachments/assets/8f078ffc-49a7-460e-af38-03aa025b5104" width="220"/>
 
 - **Telegram Chat**： [点击加入群组](https://t.me/+OgCuWhS93zczZjhl)
 
-<img src="https://github.com/user-attachments/assets/a1095f0c-57ca-42e5-a85e-cb11f6ce9121" width="300"/>
+<img src="https://github.com/user-attachments/assets/a1095f0c-57ca-42e5-a85e-cb11f6ce9121" width="220"/>
 
 - **QQ群组**：[点击加入群组(443266144)](https://qm.qq.com/q/dZ0wTXdFCw)
 
-<img src="https://github.com/user-attachments/assets/ed8472c0-8aff-4b4f-bcca-dc0f35ff6174" width="300"/>
+<img src="https://github.com/user-attachments/assets/ed8472c0-8aff-4b4f-bcca-dc0f35ff6174" width="220"/>
+
+---
+## 🎁 支持 AMMDS 项目 · 捐赠方案
+
+[AMMDS](https://ammds.lifebus.top/) 是一个完全自主化开发的项目，旨在为影视数据分析和研究提供轻量级、高效、易用的自动化工具。
+
+我们希望通过您的支持，持续优化性能、丰富功能、完善文档，并保障服务器的持续运行 🙌。
+
+---
+
+### ☕️ 捐赠等级说明
+
+| 等级 | 月捐金额 | 支持者权益 | 显示昵称 |
+|------|-----------|------------|-----------|
+| 🌱 小芽赞助 | ￥5 / 月 | 感谢邮件 | 可选 |
+| ☕️ 一杯咖啡赞助 | ￥15 / 月 | 项目首页鸣谢 | 可选 |
+| 🌟 明星赞助 | ￥30 / 月 | 首页鸣谢 + 优先回复 issue | 可选 |
+| 🚀 超级赞助 | ￥88+ / 月 | 首页鸣谢 + 优先 issue + 专属交流群 | 可选 |
+| 🧠 项目合作者 | ￥188+ / 月 | 所有权益 + 合作共建权（经协商） | 可选 |
+
+---
+
+### 🧾 一次性捐赠
+
+如果你更倾向一次性支持，也非常欢迎！
+
+- 支付宝 / 微信（扫码见下）
+- AMMDS 会员计划（计划中）
+
+<img src="https://github.com/user-attachments/assets/bdc123ad-af3b-4585-a242-fe5c1408a4c5" width="220"/>
+
+---
+
+### 💬 备注说明
+
+- 所有捐赠都将用于服务器运营、项目开发与社区维护；
+- 欢迎填写支持昵称用于鸣谢，如“小太阳”等；
+- 如果您希望匿名支持，也完全没问题；
+- 商业合作欢迎联系：`blog@lifebus.top`。
+
+---
+
+**🙏 感谢每一位捐赠者的支持！你们是开源前进的动力。**
 
 ---
 
