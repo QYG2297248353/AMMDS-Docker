@@ -6,7 +6,7 @@ on:
 
 jobs:
   buildx-dev:
-    if: github.ref_name == 'develop'
+    if: github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
 
     steps:
