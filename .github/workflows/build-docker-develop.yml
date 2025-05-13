@@ -1,6 +1,9 @@
 name: build dev docker image
 
 on:
+  push:
+    branches:
+      - release
   release:
     types: [created]
 
