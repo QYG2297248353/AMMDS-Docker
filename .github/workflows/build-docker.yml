@@ -47,7 +47,7 @@ jobs:
           password: ${{ secrets.GITHUBTOKEN }}
 
       - name: Build and push dev image
-        id: docker_build_dev
+        id: docker_build
         uses: docker/build-push-action@v4
         with:
           context: ./ammds-source
@@ -55,9 +55,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            qyg2297248353/ammds-dev:${{ github.ref_name }}
-            qyg2297248353/ammds-dev:dev
-            qyg2297248353/ammds-dev:latest
-            ghcr.io/qyg2297248353/ammds-dev:${{ github.ref_name }}
-            ghcr.io/qyg2297248353/ammds-dev:dev
-            ghcr.io/qyg2297248353/ammds-dev:latest
+            qyg2297248353/ammds:${{ github.ref_name }}
+            qyg2297248353/ammds:main
+            qyg2297248353/ammds:latest
+            ghcr.io/qyg2297248353/ammds:${{ github.ref_name }}
+            ghcr.io/qyg2297248353/ammds:main
+            ghcr.io/qyg2297248353/ammds:latest
