@@ -6,7 +6,7 @@ on:
 
 jobs:
   buildx-dev:
-    if: github.ref_type == 'branch' && github.ref_name == 'develop'
+    if: github.ref_name == 'develop'
     runs-on: ubuntu-latest
 
     steps:
