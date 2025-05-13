@@ -1,16 +1,14 @@
-name: build docker image
+name: build dev docker image
+
 on:
-  push:
-    branches:
-      - release
-    tags:
-      - 'v*'
   release:
     types: [created]
 
 jobs:
-  buildx:
+  buildx-dev:
+    if: github.ref_type == 'branch' && github.ref_name == 'develop'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -44,8 +42,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
 
-      - name: Build and push
-        id: docker_build
+      - name: Build and push dev image
+        id: docker_build_dev
         uses: docker/build-push-action@v4
         with:
           context: ./ammds-source
@@ -53,9 +51,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            qyg2297248353/ammds:${{ github.ref_name }}
-            qyg2297248353/ammds:latest
-            qyg2297248353/ammds:main
-            ghcr.io/qyg2297248353/ammds:${{ github.ref_name }}
-            ghcr.io/qyg2297248353/ammds:latest
-            ghcr.io/qyg2297248353/ammds:main
+            qyg2297248353/ammds-dev:${{ github.ref_name }}
+            qyg2297248353/ammds-dev:dev
+            qyg2297248353/ammds-dev:latest
+            ghcr.io/qyg2297248353/ammds-dev:${{ github.ref_name }}
+            ghcr.io/qyg2297248353/ammds-dev:dev
+            ghcr.io/qyg2297248353/ammds-dev:latest
