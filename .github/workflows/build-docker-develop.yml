@@ -47,7 +47,7 @@ jobs:
           password: ${{ secrets.GITHUBTOKEN }}
 
       - name: Build and push dev image
-        id: docker_build_dev
+        id: docker_build_develop
         uses: docker/build-push-action@v4
         with:
           context: ./ammds-source
