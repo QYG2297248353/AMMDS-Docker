@@ -1,15 +1,12 @@
-name: build docker image
+name: build dev docker image
 
 on:
-  push:
-    branches:
-      - release
   release:
     types: [created]
 
 jobs:
-  buildx:
-    if: github.event.release.target_commitish == 'master'
+  buildx-dev:
+    if: github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +22,6 @@ jobs:
           echo "repository: ${{ github.repository }}"
           echo "actor: ${{ github.actor }}"
           echo "ref_name: ${{ github.ref_name }}"
-          echo "target_branch: ${{ github.event.release.target_commitish }}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
