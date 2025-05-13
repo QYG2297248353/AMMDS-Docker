@@ -1,0 +1,59 @@
+name: build dev docker image
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  buildx-dev:
+    if: github.ref_type == 'branch' && github.ref_name == 'develop'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Checkout private repo (AMMDS)
+        run: |
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
+
+      - name: Print GitHub context
+        run: |
+          echo "repository: ${{ github.repository }}"
+          echo "actor: ${{ github.actor }}"
+          echo "ref_name: ${{ github.ref_name }}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Packages
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Build and push dev image
+        id: docker_build_dev
+        uses: docker/build-push-action@v4
+        with:
+          context: ./ammds-source
+          file: ./ammds-source/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            qyg2297248353/ammds-dev:${{ github.ref_name }}
+            qyg2297248353/ammds-dev:dev
+            qyg2297248353/ammds-dev:latest
+            ghcr.io/qyg2297248353/ammds-dev:${{ github.ref_name }}
+            ghcr.io/qyg2297248353/ammds-dev:dev
+            ghcr.io/qyg2297248353/ammds-dev:latest
