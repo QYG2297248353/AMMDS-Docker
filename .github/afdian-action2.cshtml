@@ -1,0 +1,101 @@
+@{
+    var viewModel = (Afdian.Action.ViewModels.AfdianViewModel)@Model;
+    string meUserId = "e6bacc3e730d11ea857252540025c377";
+    string currentRepoPlanId = "cd7b3152731011eabcd452540025c377";
+
+    // 过滤当前仓库订单 & 排除自己
+    var orders = viewModel.Order.data.list
+        .Where(m => m.plan_id == currentRepoPlanId && m.user_id != meUserId && m.status == 2)
+        .ToList();
+
+    var sponsors = viewModel.Sponsor.data.list
+        .Where(m => m.user.user_id != meUserId)
+        .Select(sponsor => {
+            var sponsorOrders = orders.Where(o => o.user_id == sponsor.user.user_id).ToList();
+            double total = sponsorOrders.Sum(o => Convert.ToDouble(o.total_amount));
+            int count = sponsorOrders.Count();
+            string latestRemark = sponsorOrders
+                .Where(o => !string.IsNullOrEmpty(o.remark))
+                .OrderByDescending(o => o.out_trade_no) // 假设按 trade_no 可近似排序时间
+                .Select(o => o.remark)
+                .FirstOrDefault() ?? "";
+
+            return new {
+                userId = sponsor.user.user_id,
+                name = sponsor.user.name,
+                avatar = sponsor.user.avatar,
+                totalAmount = total,
+                orderCount = count,
+                latestRemark = latestRemark
+            };
+        })
+        .Where(s => s.totalAmount > 0)
+        .OrderByDescending(s => s.totalAmount)
+        .ThenByDescending(s => s.orderCount)
+        .ToList();
+}
+
+<style>
+    .sponsor-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: #f9f9f9;
+        max-width: 600px;
+    }
+
+    .sponsor-avatar {
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+    }
+
+    .sponsor-info {
+        flex: 1;
+    }
+
+    .sponsor-name {
+        font-weight: bold;
+        font-size: 16px;
+        color: #0078d4;
+        text-decoration: none;
+    }
+
+    .sponsor-detail {
+        font-size: 14px;
+        color: #333;
+    }
+
+    .sponsor-remark {
+        font-style: italic;
+        color: #555;
+        margin-top: 4px;
+    }
+</style>
+
+<div>
+    @foreach (var s in sponsors)
+    {
+        <div class="sponsor-card">
+            <a href="https://afdian.net/u/@s.userId" target="_blank">
+                <img src="@s.avatar?imageView2/1/w/120/h/120" class="sponsor-avatar" alt="@s.name" title="@s.name"/>
+            </a>
+            <div class="sponsor-info">
+                <a class="sponsor-name" href="https://afdian.net/u/@s.userId" target="_blank">@s.name</a>
+                <div class="sponsor-detail">
+                    累计赞助 @s.orderCount 次，总金额 ￥@string.Format("{0:0.##}", s.totalAmount)
+                </div>
+                @if (!string.IsNullOrEmpty(s.latestRemark))
+                {
+                    <div class="sponsor-remark">
+                        留言：@s.latestRemark
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
