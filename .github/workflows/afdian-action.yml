@@ -23,7 +23,7 @@ jobs:
           # 爱发电 token
           afdian_token: ${{ secrets.AFDIAN_TOKEN }}
           # 默认为: .github/afdian-action.cshtml
-          template_filePath: ".github/afdian-action.cshtml"
+          template_filePath: ".github/afdian-action2.cshtml"
           # 默认为: README.md
           target_filePath: "README.md"
           # 可省, 高级选项: RazorEngine Complie, 在 cshtml 中需要 using 的 namespace, 多个用 ; 隔开
