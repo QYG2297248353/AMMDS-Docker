@@ -1,0 +1,66 @@
+@{
+    var viewModel = (Afdian.Action.ViewModels.AfdianViewModel)@Model;
+    string meUserId = "e6bacc3e730d11ea857252540025c377";
+    string currentRepoPlanId = "cd7b3152731011eabcd452540025c377";
+
+    // 数据预处理
+    var validSponsors = viewModel.Sponsor.data.list
+        .Where(m => m.user.user_id != meUserId)
+        .ToList();
+
+    var validOrders = viewModel.Order.data.list
+        .Where(m => m.plan_id == currentRepoPlanId)
+        .ToList();
+
+    // 创建排序结构体
+    var sortedSponsors = validSponsors.Select(sponsor => {
+        var orders = validOrders.Where(o => o.user_id == sponsor.user.user_id).ToList();
+        var lastOrderTime = orders.Any() ? orders.Max(o => DateTime.Parse(o.out_trade_no.Substring(0,14))) : DateTime.MinValue;
+        return new {
+            Sponsor = sponsor,
+            OrderCount = orders.Count,
+            LastOrderTime = lastOrderTime,
+            TotalAmount = orders.Sum(o => Convert.ToDouble(o.total_amount))
+        };
+    })
+    .OrderByDescending(x => x.TotalAmount)
+    .ThenByDescending(x => x.LastOrderTime)
+    .ToList();
+}
+
+<!-- 头像展示区 -->
+<div align="center">
+@foreach (var item in sortedSponsors)
+{
+    <a href="https://afdian.net/u/@item.Sponsor.user.user_id" title="@item.Sponsor.user.name">
+        <img src="@item.Sponsor.user.avatar?imageView2/1/w/120/h/120" width="50" height="50" style="border-radius:50%;margin:5px;">
+    </a>
+}
+</div>
+
+<details>
+<summary>🎉 感谢这些可爱的赞助者（点击展开）</summary>
+
+<br>
+
+@foreach (var item in sortedSponsors)
+{
+    var remark = validOrders
+        .Where(o => o.user_id == item.Sponsor.user.user_id)
+        .LastOrDefault()?.remark;
+    
+    <div style="margin-bottom: 8px;">
+        <a href="https://afdian.net/u/@item.Sponsor.user.user_id" style="text-decoration: none;">
+            <img src="@item.Sponsor.user.avatar?imageView2/1/w/40/h/40" width="20" height="20" style="vertical-align: middle; border-radius: 50%;">
+            <span style="color: #0366d6;">@item.Sponsor.user.name</span>
+        </a>
+        <span style="color: #586069;">
+            (@item.OrderCount 次支持) 
+            @if (!string.IsNullOrEmpty(remark))
+            {
+                <text>📝: @(remark.Length > 15 ? remark.Substring(0,15) + "..." : remark)</text>
+            }
+        </span>
+    </div>
+}
+</details>
