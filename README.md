@@ -152,34 +152,27 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 <!-- AFDIAN-ACTION:START -->
 
-<a href="https://afdian.net/u/7a610564308911f0bc8e5254001e7c00">
-    <img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/120/h/120" width="40" height="40" alt="嗨咯" title="嗨咯"/>
-</a>
-<a href="https://afdian.net/u/09e885e22e3a11f0af0352540025c377">
-    <img src="https://pic1.afdiancdn.com/default/avatar/avatar-purple.png?imageView2/1/?imageView2/1/w/120/h/120" width="40" height="40" alt="爱发电用户_09e88" title="爱发电用户_09e88"/>
-</a>
-<a href="https://afdian.net/u/601d91c22ce711f09fd052540025c377">
-    <img src="https://pic1.afdiancdn.com/default/avatar/avatar-orange.png?imageView2/1/w/120/h/120" width="40" height="40" alt="爱发电用户_AFGN" title="爱发电用户_AFGN"/>
-</a>
+<!-- 头像墙 -->
+<p>
+</p>
 
 <details>
-  <summary>点我 打开/关闭 赞助者列表</summary>
+<summary>点击展开详细赞助者信息</summary>
 
-<a href="https://afdian.net/u/7a610564308911f0bc8e5254001e7c00">
-嗨咯
-</a>
-<span>( 0 次赞助, 共 ￥0 ) 留言: </span><br>
-<a href="https://afdian.net/u/09e885e22e3a11f0af0352540025c377">
-爱发电用户_09e88
-</a>
-<span>( 0 次赞助, 共 ￥0 ) 留言: </span><br>
-<a href="https://afdian.net/u/601d91c22ce711f09fd052540025c377">
-爱发电用户_AFGN
-</a>
-<span>( 0 次赞助, 共 ￥0 ) 留言: </span><br>
-
+<table>
+  <thead>
+    <tr>
+      <th>头像</th>
+      <th>昵称</th>
+      <th>赞助次数</th>
+      <th>总金额</th>
+      <th>留言</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
 </details>
-<!-- 注意: 尽量将标签前靠,否则经测试可能被 GitHub 解析为代码块 -->
 
 <!-- AFDIAN-ACTION:END -->
 
