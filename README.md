@@ -150,6 +150,9 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 **🙏 感谢每一位捐赠者的支持！你们是开源前进的动力。**
 
+<!-- AFDIAN-ACTION:START -->
+<!-- AFDIAN-ACTION:END -->
+
 ---
 
 ## 📞 技术支持
