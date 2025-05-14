@@ -154,7 +154,7 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 <!-- 头像展示区 -->
 <div align="center">
-<a href="https://afdian.net/u/7a610564308911f0bc8e5254001e7c00" 
+<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
 title="嗨咯"
 target="_blank"
 rel="noopener noreferrer">
@@ -164,7 +164,7 @@ height="50"
 style="border-radius:50%;margin:5px;"
 alt="嗨咯">
 </a>
-<a href="https://afdian.net/u/09e885e22e3a11f0af0352540025c377" 
+<a href="https://afdian.com/u/09e885e22e3a11f0af0352540025c377" 
 title="爱发电用户_09e88"
 target="_blank"
 rel="noopener noreferrer">
@@ -174,7 +174,7 @@ height="50"
 style="border-radius:50%;margin:5px;"
 alt="爱发电用户_09e88">
 </a>
-<a href="https://afdian.net/u/601d91c22ce711f09fd052540025c377" 
+<a href="https://afdian.com/u/601d91c22ce711f09fd052540025c377" 
 title="爱发电用户_AFGN"
 target="_blank"
 rel="noopener noreferrer">
@@ -191,7 +191,7 @@ alt="爱发电用户_AFGN">
 <br>
 
 <div style="margin-bottom: 8px;">
-<a href="https://afdian.net/u/7a610564308911f0bc8e5254001e7c00" 
+<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
 style="text-decoration: none;">
 <img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/40/h/40" 
 width="20" 
@@ -205,7 +205,7 @@ alt="嗨咯">
 </span>
 </div>
 <div style="margin-bottom: 8px;">
-<a href="https://afdian.net/u/09e885e22e3a11f0af0352540025c377" 
+<a href="https://afdian.com/u/09e885e22e3a11f0af0352540025c377" 
 style="text-decoration: none;">
 <img src="https://pic1.afdiancdn.com/default/avatar/avatar-purple.png?imageView2/1/?imageView2/1/w/40/h/40" 
 width="20" 
@@ -219,7 +219,7 @@ alt="爱发电用户_09e88">
 </span>
 </div>
 <div style="margin-bottom: 8px;">
-<a href="https://afdian.net/u/601d91c22ce711f09fd052540025c377" 
+<a href="https://afdian.com/u/601d91c22ce711f09fd052540025c377" 
 style="text-decoration: none;">
 <img src="https://pic1.afdiancdn.com/default/avatar/avatar-orange.png?imageView2/1/w/40/h/40" 
 width="20" 
