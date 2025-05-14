@@ -1,72 +1,78 @@
 @{
     var vm = (Afdian.Action.ViewModels.AfdianViewModel)Model;
-    string meUserId = "e6bacc3e730d11ea857252540025c377";
-    string currentPlanId = "cd7b3152731011eabcd452540025c377";
+    string meUserId       = "e6bacc3e730d11ea857252540025c377";
+    string currentPlanId  = "cd7b3152731011eabcd452540025c377";
 
-    // 1. 过滤订单：只留本 repo 计划、支付成功、排除自己
-    var orders = vm.Order.data.list
+    // 1. 过滤：只要本仓库计划、交易成功、排除自己
+    var validOrders = vm.Order.data.list
         .Where(o => o.plan_id == currentPlanId && o.status == 2 && o.user_id != meUserId)
         .ToList();
 
-    // 2. 聚合每个赞助者
-    var sponsors = vm.Sponsor.data.list
+    var validSponsors = vm.Sponsor.data.list
         .Where(s => s.user.user_id != meUserId)
+        .ToList();
+
+    // 2. 聚合及排序
+    var sorted = validSponsors
         .Select(s => {
-            var so = orders.Where(o => o.user_id == s.user.user_id).ToList();
-            double totalAmt = so.Sum(o => Convert.ToDouble(o.total_amount));
-            var lastOrder = so
-                .OrderByDescending(o => o.out_trade_no)  // 假设 trade_no 可近似时间
-                .FirstOrDefault();
+            var orders = validOrders.Where(o => o.user_id == s.user.user_id).ToList();
+            // 最后一次支付时间（假设 out_trade_no 前14位为 yyyyMMddHHmmss）
+            DateTime lastTime = orders.Any()
+                ? DateTime.ParseExact(orders.Max(o => o.out_trade_no).Substring(0, 14),
+                                      "yyyyMMddHHmmss",
+                                      null)
+                : DateTime.MinValue;
             return new {
-                Id     = s.user.user_id,
-                Name   = s.user.name,
-                Avatar = s.user.avatar + "?imageView2/1/w/120/h/120",
-                Count  = so.Count,
-                LatestRemark = lastOrder?.remark ?? "",
-                LastTime     = lastOrder?.out_trade_no ?? ""
+                Sponsor    = s,
+                OrderCount = orders.Count,
+                LastTime   = lastTime,
+                TotalAmt   = orders.Sum(o => Convert.ToDouble(o.total_amount))
             };
         })
-        .Where(x => x.Count > 0)  // 只留有过赞助的
-        .OrderByDescending(x => x.Count)      // 先按次数（或改成 totalAmt）
-        .ThenByDescending(x => x.LastTime)    // 同次数按支付时间
+        .Where(x => x.OrderCount > 0)                // 只保留至少一次赞助
+        .OrderByDescending(x => x.TotalAmt)          // 按总金额降序
+        .ThenByDescending(x => x.LastTime)           // 同金额则按最新时间
         .ToList();
 }
 
-@if (!sponsors.Any())
+@if (!sorted.Any())
 {
     <text>
-暂无赞助者，快来做第一位吧！  
+> 暂无赞助者，欢迎第一个支持！  
     </text>
 }
 else
 {
-    // 顶部头像墙
     <text>
-## 💝 感谢以下赞助者  
+## 💝 感谢以下赞助者
 
-<p>
-@foreach (var s in sponsors)
+<p align="center">
+@foreach (var item in sorted)
 {
-    <a href="https://afdian.net/u/@s.Id" title="@s.Name" target="_blank" style="margin:0 4px;">
-        <img src="@s.Avatar" width="40" height="40" style="border-radius:50%;" alt="@s.Name" />
+    <a href="https://afdian.net/u/@item.Sponsor.user.user_id" title="@item.Sponsor.user.name" target="_blank" style="margin:0 6px;">
+        <img src="@item.Sponsor.user.avatar?imageView2/1/w/120/h/120" width="50" height="50" style="border-radius:50%;" alt="@item.Sponsor.user.name" />
     </a>
 }
 </p>
-    </text>
+</text>
 
-    // 折叠详细表格
     <text>
 <details>
-<summary>点击查看详细赞助信息（@sponsors.Count() 人）</summary>
+<summary>🎉 点击查看详细赞助信息（@sorted.Count() 人）</summary>
 
-| 头像 | 昵称 | 赞助次数 | 最新留言 |
+| 头像 | 昵称 | 支持次数 | 最新留言 |
 | ---- | ---- | -------- | -------- |
-@foreach (var s in sponsors)
+@foreach (var item in sorted)
 {
-    // 截断留言
-    var rm = s.LatestRemark.Length > 20 ? s.LatestRemark.Substring(0,20) + "..." : s.LatestRemark;
+    // 取最新留言并截断
+    var remark = vm.Order.data.list
+        .Where(o => o.user_id == item.Sponsor.user.user_id && !string.IsNullOrWhiteSpace(o.remark))
+        .OrderByDescending(o => DateTime.ParseExact(o.out_trade_no.Substring(0,14),"yyyyMMddHHmmss",null))
+        .Select(o => o.remark)
+        .FirstOrDefault() ?? "—";
+    var shortRm = remark.Length > 20 ? remark.Substring(0,20) + "..." : remark;
     <text>
-| <img src="@s.Avatar" width="30" height="30" style="border-radius:50%;" /> | [@s.Name](https://afdian.net/u/@s.Id) | @s.Count | @(!string.IsNullOrWhiteSpace(rm) ? rm : "—") |
+| <img src="@item.Sponsor.user.avatar?imageView2/1/w/120/h/120" width="30" height="30" style="border-radius:50%;" /> | [@item.Sponsor.user.name](https://afdian.net/u/@item.Sponsor.user.user_id) | @item.OrderCount | @shortRm |
     </text>
 }
 </details>
