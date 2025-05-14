@@ -1,81 +1,74 @@
 @{
-    var viewModel = (Afdian.Action.ViewModels.AfdianViewModel)@Model;
+    var vm = (Afdian.Action.ViewModels.AfdianViewModel)Model;
     string meUserId = "e6bacc3e730d11ea857252540025c377";
-    string currentRepoPlanId = "cd7b3152731011eabcd452540025c377";
+    string currentPlanId = "cd7b3152731011eabcd452540025c377";
 
-    // 筛选订单
-    var orders = viewModel.Order.data.list
-        .Where(m => m.plan_id == currentRepoPlanId && m.status == 2 && m.user_id != meUserId)
+    // 1. 过滤订单：只留本 repo 计划、支付成功、排除自己
+    var orders = vm.Order.data.list
+        .Where(o => o.plan_id == currentPlanId && o.status == 2 && o.user_id != meUserId)
         .ToList();
 
-    // 构建赞助者数据
-    var sponsors = viewModel.Sponsor.data.list
+    // 2. 聚合每个赞助者
+    var sponsors = vm.Sponsor.data.list
         .Where(s => s.user.user_id != meUserId)
         .Select(s => {
-            var sponsorOrders = orders.Where(o => o.user_id == s.user.user_id).ToList();
-            double total = sponsorOrders.Sum(o => Convert.ToDouble(o.total_amount));
-            int count = sponsorOrders.Count();
-            string latestRemark = sponsorOrders
-                .Where(o => !string.IsNullOrEmpty(o.remark))
-                .OrderByDescending(o => o.out_trade_no) // 或使用 create_time 字段
-                .Select(o => o.remark)
-                .FirstOrDefault() ?? "";
-
-            string latestTime = sponsorOrders
-                .OrderByDescending(o => o.out_trade_no)
-                .Select(o => o.out_trade_no)
+            var so = orders.Where(o => o.user_id == s.user.user_id).ToList();
+            double totalAmt = so.Sum(o => Convert.ToDouble(o.total_amount));
+            var lastOrder = so
+                .OrderByDescending(o => o.out_trade_no)  // 假设 trade_no 可近似时间
                 .FirstOrDefault();
-
             return new {
-                userId = s.user.user_id,
-                name = s.user.name,
-                avatar = s.user.avatar,
-                total = total,
-                count = count,
-                remark = latestRemark,
-                latestTime = latestTime
+                Id     = s.user.user_id,
+                Name   = s.user.name,
+                Avatar = s.user.avatar + "?imageView2/1/w/120/h/120",
+                Count  = so.Count,
+                LatestRemark = lastOrder?.remark ?? "",
+                LastTime     = lastOrder?.out_trade_no ?? ""
             };
         })
-        .Where(s => s.total > 0)
-        .OrderByDescending(s => s.total)
-        .ThenByDescending(s => s.latestTime) // 模拟时间排序
+        .Where(x => x.Count > 0)  // 只留有过赞助的
+        .OrderByDescending(x => x.Count)      // 先按次数（或改成 totalAmt）
+        .ThenByDescending(x => x.LastTime)    // 同次数按支付时间
         .ToList();
 }
 
-<!-- 头像墙 -->
+@if (!sponsors.Any())
+{
+    <text>
+暂无赞助者，快来做第一位吧！  
+    </text>
+}
+else
+{
+    // 顶部头像墙
+    <text>
+## 💝 感谢以下赞助者  
+
 <p>
 @foreach (var s in sponsors)
 {
-    <a href="https://afdian.net/u/@s.userId" title="@s.name" target="_blank" style="margin-right:6px;">
-        <img src="@s.avatar?imageView2/1/w/60/h/60" width="40" height="40" style="border-radius:50%;">
+    <a href="https://afdian.net/u/@s.Id" title="@s.Name" target="_blank" style="margin:0 4px;">
+        <img src="@s.Avatar" width="40" height="40" style="border-radius:50%;" alt="@s.Name" />
     </a>
 }
 </p>
+    </text>
 
+    // 折叠详细表格
+    <text>
 <details>
-<summary>点击展开详细赞助者信息</summary>
+<summary>点击查看详细赞助信息（@sponsors.Count() 人）</summary>
 
-<table>
-  <thead>
-    <tr>
-      <th>头像</th>
-      <th>昵称</th>
-      <th>赞助次数</th>
-      <th>总金额</th>
-      <th>留言</th>
-    </tr>
-  </thead>
-  <tbody>
+| 头像 | 昵称 | 赞助次数 | 最新留言 |
+| ---- | ---- | -------- | -------- |
 @foreach (var s in sponsors)
 {
-<tr>
-  <td><img src="@s.avatar?imageView2/1/w/60/h/60" width="40" height="40" style="border-radius:50%;"/></td>
-  <td><a href="https://afdian.net/u/@s.userId" target="_blank">@s.name</a></td>
-  <td>@s.count</td>
-  <td>￥@string.Format("{0:0.##}", s.total)</td>
-  <td>@(s.remark.Length > 20 ? s.remark.Substring(0, 20) + "..." : s.remark)</td>
-</tr>
+    // 截断留言
+    var rm = s.LatestRemark.Length > 20 ? s.LatestRemark.Substring(0,20) + "..." : s.LatestRemark;
+    <text>
+| <img src="@s.Avatar" width="30" height="30" style="border-radius:50%;" /> | [@s.Name](https://afdian.net/u/@s.Id) | @s.Count | @(!string.IsNullOrWhiteSpace(rm) ? rm : "—") |
+    </text>
 }
-  </tbody>
-</table>
 </details>
+    </text>
+}
