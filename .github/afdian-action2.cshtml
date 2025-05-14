@@ -1,0 +1,80 @@
+@{
+    var vm = (Afdian.Action.ViewModels.AfdianViewModel)Model;
+    string meUserId       = "e6bacc3e730d11ea857252540025c377";
+    string currentPlanId  = "cd7b3152731011eabcd452540025c377";
+
+    // 1. 过滤：只要本仓库计划、交易成功、排除自己
+    var validOrders = vm.Order.data.list
+        .Where(o => o.plan_id == currentPlanId && o.status == 2 && o.user_id != meUserId)
+        .ToList();
+
+    var validSponsors = vm.Sponsor.data.list
+        .Where(s => s.user.user_id != meUserId)
+        .ToList();
+
+    // 2. 聚合及排序
+    var sorted = validSponsors
+        .Select(s => {
+            var orders = validOrders.Where(o => o.user_id == s.user.user_id).ToList();
+            // 最后一次支付时间（假设 out_trade_no 前14位为 yyyyMMddHHmmss）
+            DateTime lastTime = orders.Any()
+                ? DateTime.ParseExact(orders.Max(o => o.out_trade_no).Substring(0, 14),
+                                      "yyyyMMddHHmmss",
+                                      null)
+                : DateTime.MinValue;
+            return new {
+                Sponsor    = s,
+                OrderCount = orders.Count,
+                LastTime   = lastTime,
+                TotalAmt   = orders.Sum(o => Convert.ToDouble(o.total_amount))
+            };
+        })
+        .Where(x => x.OrderCount > 0)                // 只保留至少一次赞助
+        .OrderByDescending(x => x.TotalAmt)          // 按总金额降序
+        .ThenByDescending(x => x.LastTime)           // 同金额则按最新时间
+        .ToList();
+}
+
+@if (!sorted.Any())
+{
+    <text>
+> 暂无赞助者，欢迎第一个支持！  
+    </text>
+}
+else
+{
+    <text>
+## 💝 感谢以下赞助者
+
+<p align="center">
+@foreach (var item in sorted)
+{
+    <a href="https://afdian.net/u/@item.Sponsor.user.user_id" title="@item.Sponsor.user.name" target="_blank" style="margin:0 6px;">
+        <img src="@item.Sponsor.user.avatar?imageView2/1/w/120/h/120" width="50" height="50" style="border-radius:50%;" alt="@item.Sponsor.user.name" />
+    </a>
+}
+</p>
+</text>
+
+    <text>
+<details>
+<summary>🎉 点击查看详细赞助信息（@sorted.Count() 人）</summary>
+
+| 头像 | 昵称 | 支持次数 | 最新留言 |
+| ---- | ---- | -------- | -------- |
+@foreach (var item in sorted)
+{
+    // 取最新留言并截断
+    var remark = vm.Order.data.list
+        .Where(o => o.user_id == item.Sponsor.user.user_id && !string.IsNullOrWhiteSpace(o.remark))
+        .OrderByDescending(o => DateTime.ParseExact(o.out_trade_no.Substring(0,14),"yyyyMMddHHmmss",null))
+        .Select(o => o.remark)
+        .FirstOrDefault() ?? "—";
+    var shortRm = remark.Length > 20 ? remark.Substring(0,20) + "..." : remark;
+    <text>
+| <img src="@item.Sponsor.user.avatar?imageView2/1/w/120/h/120" width="30" height="30" style="border-radius:50%;" /> | [@item.Sponsor.user.name](https://afdian.net/u/@item.Sponsor.user.user_id) | @item.OrderCount | @shortRm |
+    </text>
+}
+</details>
+    </text>
+}

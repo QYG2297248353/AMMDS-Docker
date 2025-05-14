@@ -1,4 +1,4 @@
-# AMMDS - 个人影视数据管理平台
+﻿# AMMDS - 个人影视数据管理平台
 
 AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台，专注于帮助用户轻松管理和整理个人影视库。通过智能刮削元数据、演员识别、多源数据匹配等功能，打造专属的家庭影院体验。
 
@@ -149,6 +149,92 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 ---
 
 **🙏 感谢每一位捐赠者的支持！你们是开源前进的动力。**
+
+<!-- AFDIAN-ACTION:START -->
+
+<!-- 头像展示区 -->
+<div align="center">
+<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
+title="嗨咯"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="嗨咯">
+</a>
+<a href="https://afdian.com/u/09e885e22e3a11f0af0352540025c377" 
+title="爱发电用户_09e88"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-purple.png?imageView2/1/?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="爱发电用户_09e88">
+</a>
+<a href="https://afdian.com/u/601d91c22ce711f09fd052540025c377" 
+title="爱发电用户_AFGN"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-orange.png?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="爱发电用户_AFGN">
+</a>
+</div>
+
+<details>
+<summary>🎉 感谢这些可爱的赞助者（点击展开）</summary>
+<br>
+
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
+style="text-decoration: none;">
+<img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="嗨咯">
+<span style="color: #0366d6;">嗨咯</span>
+</a>
+<span style="color: #586069;">
+(0 次支持)
+</span>
+</div>
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.com/u/09e885e22e3a11f0af0352540025c377" 
+style="text-decoration: none;">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-purple.png?imageView2/1/?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="爱发电用户_09e88">
+<span style="color: #0366d6;">爱发电用户_09e88</span>
+</a>
+<span style="color: #586069;">
+(0 次支持)
+</span>
+</div>
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.com/u/601d91c22ce711f09fd052540025c377" 
+style="text-decoration: none;">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-orange.png?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="爱发电用户_AFGN">
+<span style="color: #0366d6;">爱发电用户_AFGN</span>
+</a>
+<span style="color: #586069;">
+(0 次支持)
+</span>
+</div>
+</details>
+
+<!-- AFDIAN-ACTION:END -->
 
 ---
 
