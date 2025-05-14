@@ -1,4 +1,4 @@
-# AMMDS - 个人影视数据管理平台
+﻿# AMMDS - 个人影视数据管理平台
 
 AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台，专注于帮助用户轻松管理和整理个人影视库。通过智能刮削元数据、演员识别、多源数据匹配等功能，打造专属的家庭影院体验。
 
@@ -151,6 +151,36 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 **🙏 感谢每一位捐赠者的支持！你们是开源前进的动力。**
 
 <!-- AFDIAN-ACTION:START -->
+
+<a href="https://afdian.net/u/7a610564308911f0bc8e5254001e7c00">
+    <img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/120/h/120" width="40" height="40" alt="嗨咯" title="嗨咯"/>
+</a>
+<a href="https://afdian.net/u/09e885e22e3a11f0af0352540025c377">
+    <img src="https://pic1.afdiancdn.com/default/avatar/avatar-purple.png?imageView2/1/?imageView2/1/w/120/h/120" width="40" height="40" alt="爱发电用户_09e88" title="爱发电用户_09e88"/>
+</a>
+<a href="https://afdian.net/u/601d91c22ce711f09fd052540025c377">
+    <img src="https://pic1.afdiancdn.com/default/avatar/avatar-orange.png?imageView2/1/w/120/h/120" width="40" height="40" alt="爱发电用户_AFGN" title="爱发电用户_AFGN"/>
+</a>
+
+<details>
+  <summary>点我 打开/关闭 赞助者列表</summary>
+
+<a href="https://afdian.net/u/7a610564308911f0bc8e5254001e7c00">
+嗨咯
+</a>
+<span>( 0 次赞助, 共 ￥0 ) 留言: </span><br>
+<a href="https://afdian.net/u/09e885e22e3a11f0af0352540025c377">
+爱发电用户_09e88
+</a>
+<span>( 0 次赞助, 共 ￥0 ) 留言: </span><br>
+<a href="https://afdian.net/u/601d91c22ce711f09fd052540025c377">
+爱发电用户_AFGN
+</a>
+<span>( 0 次赞助, 共 ￥0 ) 留言: </span><br>
+
+</details>
+<!-- 注意: 尽量将标签前靠,否则经测试可能被 GitHub 解析为代码块 -->
+
 <!-- AFDIAN-ACTION:END -->
 
 ---
