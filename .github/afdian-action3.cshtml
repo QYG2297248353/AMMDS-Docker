@@ -1,69 +1,65 @@
+@using System.Globalization
 @{
     var viewModel = (Afdian.Action.ViewModels.AfdianViewModel)Model;
     const string meUserId = "e6bacc3e730d11ea857252540025c377";
     const string currentRepoPlanId = "cd7b3152731011eabcd452540025c377";
 
-    // 数据预处理（优化查询性能）
+    // 数据预处理
     var validOrders = viewModel.Order.data.list
         .Where(m => m.plan_id == currentRepoPlanId)
         .ToList();
 
     var validSponsors = viewModel.Sponsor.data.list
         .Where(m => m.user.user_id != meUserId)
-        .Join(validOrders,
-            s => s.user.user_id,
-            o => o.user_id,
-            (s, _) => s)
-        .Distinct()
         .ToList();
 
-    // 创建排序结构体（增强稳定性）
-    var sortedSponsors = validSponsors.Select(sponsor => {
-        var userOrders = validOrders
-            .Where(o => o.user_id == sponsor.user.user_id)
-            .OrderByDescending(o => o.out_trade_no)
-            .ToList();
-
-        var lastOrder = userOrders.FirstOrDefault();
-        DateTime lastOrderTime = DateTime.MinValue;
-        
-        if (lastOrder != null && lastOrder.out_trade_no.Length >= 14)
+    // 创建排序结构体
+    var sortedSponsors = validSponsors
+        .Select(sponsor => 
         {
-            DateTime.TryParseExact(
-                lastOrder.out_trade_no.Substring(0, 14),
-                "yyyyMMddHHmmss",
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out lastOrderTime);
-        }
+            var userOrders = validOrders
+                .Where(o => o.user_id == sponsor.user.user_id)
+                .OrderByDescending(o => o.out_trade_no)
+                .ToList();
 
-        return new {
-            Sponsor = sponsor,
-            OrderCount = userOrders.Count,
-            LastOrderTime = lastOrderTime,
-            TotalAmount = userOrders.Sum(o => Convert.ToDouble(o.total_amount)),
-            LastRemark = userOrders.LastOrDefault(o => !string.IsNullOrEmpty(o.remark))?.remark
-        };
-    })
-    .OrderByDescending(x => x.TotalAmount)
-    .ThenByDescending(x => x.LastOrderTime)
-    .ToList();
+            DateTime lastOrderTime = DateTime.MinValue;
+            if (userOrders.Any() && userOrders.First().out_trade_no.Length >= 14)
+            {
+                DateTime.TryParseExact(
+                    userOrders.First().out_trade_no.Substring(0, 14),
+                    "yyyyMMddHHmmss",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out lastOrderTime);
+            }
+
+            return new 
+            {
+                User = sponsor.user,
+                OrderCount = userOrders.Count,
+                LastOrderTime = lastOrderTime,
+                TotalAmount = userOrders.Sum(o => Convert.ToDouble(o.total_amount)),
+                LastRemark = userOrders.LastOrDefault(o => !string.IsNullOrEmpty(o.remark))?.remark
+            };
+        })
+        .OrderByDescending(x => x.TotalAmount)
+        .ThenByDescending(x => x.LastOrderTime)
+        .ToList();
 }
 
-<!-- 头像展示区（增加懒加载优化） -->
+<!-- 头像展示区 -->
 <div align="center">
 @foreach (var item in sortedSponsors)
 {
-    <a href="https://afdian.net/u/@item.Sponsor.user.user_id" 
-       title="@item.Sponsor.user.name"
+    <a href="https://afdian.net/u/@item.User.user_id" 
+       title="@item.User.name"
        target="_blank"
        rel="noopener noreferrer">
-        <img src="@item.Sponsor.user.avatar?imageView2/1/w/120/h/120" 
+        <img src="@item.User.avatar?imageView2/1/w/120/h/120" 
              width="50" 
              height="50" 
              style="border-radius:50%;margin:5px;"
-             alt="@item.Sponsor.user.name"
-             loading="lazy">
+             alt="@item.User.name">
     </a>
 }
 </div>
@@ -79,24 +75,21 @@
         ? remark.Substring(0, 15) + "..." 
         : remark;
 
-    <div style="margin-bottom: 8px; line-height: 1.5;">
-        <a href="https://afdian.net/u/@item.Sponsor.user.user_id" 
-           style="text-decoration: none;"
-           target="_blank"
-           rel="noopener noreferrer">
-            <img src="@item.Sponsor.user.avatar?imageView2/1/w/40/h/40" 
+    <div style="margin-bottom: 8px;">
+        <a href="https://afdian.net/u/@item.User.user_id" 
+           style="text-decoration: none;">
+            <img src="@item.User.avatar?imageView2/1/w/40/h/40" 
                  width="20" 
                  height="20" 
                  style="vertical-align: middle; border-radius: 50%;"
-                 alt="@item.Sponsor.user.name"
-                 loading="lazy">
-            <span style="color: #0366d6; font-weight: 500;">@item.Sponsor.user.name</span>
+                 alt="@item.User.name">
+            <span style="color: #0366d6;">@item.User.name</span>
         </a>
-        <span style="color: #586069; font-size: 0.9em;">
+        <span style="color: #586069;">
             (@item.OrderCount 次支持)
             @if (!string.IsNullOrEmpty(remark))
             {
-                <span title="@remark" style="cursor: help;">📝 @displayRemark</span>
+                <text>📝 @displayRemark</text>
             }
         </span>
     </div>
