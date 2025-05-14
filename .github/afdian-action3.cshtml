@@ -1,8 +1,8 @@
 @using System.Globalization
 @{
     var viewModel = (Afdian.Action.ViewModels.AfdianViewModel)Model;
-    const string meUserId = "e6bacc3e730d11ea857252540025c377";
-    const string currentRepoPlanId = "cd7b3152731011eabcd452540025c377";
+    const string meUserId = "ce877b804a2c11efafef52540025c377";
+    const string currentRepoPlanId = "ce877b804a2c11efafef52540025c377";
 
     // 数据预处理
     var validOrders = viewModel.Order.data.list
@@ -51,16 +51,16 @@
 <div align="center">
 @foreach (var item in sortedSponsors)
 {
-    <a href="https://afdian.net/u/@item.User.user_id" 
-       title="@item.User.name"
-       target="_blank"
-       rel="noopener noreferrer">
-        <img src="@item.User.avatar?imageView2/1/w/120/h/120" 
-             width="50" 
-             height="50" 
-             style="border-radius:50%;margin:5px;"
-             alt="@item.User.name">
-    </a>
+<a href="https://afdian.net/u/@item.User.user_id" 
+title="@item.User.name"
+target="_blank"
+rel="noopener noreferrer">
+<img src="@item.User.avatar?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="@item.User.name">
+</a>
 }
 </div>
 
@@ -75,23 +75,23 @@
         ? remark.Substring(0, 15) + "..." 
         : remark;
 
-    <div style="margin-bottom: 8px;">
-        <a href="https://afdian.net/u/@item.User.user_id" 
-           style="text-decoration: none;">
-            <img src="@item.User.avatar?imageView2/1/w/40/h/40" 
-                 width="20" 
-                 height="20" 
-                 style="vertical-align: middle; border-radius: 50%;"
-                 alt="@item.User.name">
-            <span style="color: #0366d6;">@item.User.name</span>
-        </a>
-        <span style="color: #586069;">
-            (@item.OrderCount 次支持)
-            @if (!string.IsNullOrEmpty(remark))
-            {
-                <text>📝 @displayRemark</text>
-            }
-        </span>
-    </div>
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.net/u/@item.User.user_id" 
+style="text-decoration: none;">
+<img src="@item.User.avatar?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="@item.User.name">
+<span style="color: #0366d6;">@item.User.name</span>
+</a>
+<span style="color: #586069;">
+(@item.OrderCount 次支持)
+@if (!string.IsNullOrEmpty(remark))
+{
+<text>📝 @displayRemark</text>
+}
+</span>
+</div>
 }
 </details>
