@@ -112,7 +112,9 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 我们希望通过您的支持，持续优化性能、丰富功能、完善文档，并保障服务器的持续运行 🙌。
 
-点此进入：[爱发电](https://afdian.com/a/qyg2297248353)
+<a href="https://afdian.com/a/qyg2297248353">
+  <img src="https://github.com/user-attachments/assets/586833f0-c18d-4965-a633-2e8bf54b20dc" alt="support me on afd-发电紫" width="300">
+</a>
 
 ---
 
