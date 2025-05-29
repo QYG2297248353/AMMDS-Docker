@@ -2,9 +2,6 @@ name: build-backend-base
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'Dockerfile-BackBase'
 
 jobs:
   build-base:
