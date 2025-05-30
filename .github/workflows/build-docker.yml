@@ -48,6 +48,7 @@ jobs:
           file: ./ammds-source/Dockerfile
           platforms: linux/amd64
           push: true
+          outputs: type=image,name=qyg2297248353/ammds,push=true
           tags: |
             qyg2297248353/ammds:${{ github.ref_name }}-amd64
             ghcr.io/qyg2297248353/ammds:${{ github.ref_name }}-amd64
@@ -92,6 +93,7 @@ jobs:
           file: ./ammds-source/Dockerfile
           platforms: linux/arm64
           push: true
+          outputs: type=image,name=qyg2297248353/ammds,push=true
           tags: |
             qyg2297248353/ammds:${{ github.ref_name }}-arm64
             ghcr.io/qyg2297248353/ammds:${{ github.ref_name }}-arm64
