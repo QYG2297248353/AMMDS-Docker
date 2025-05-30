@@ -1,4 +1,4 @@
-name: Rebuild and Push Multi-Arch Manifest
+name: Fully Rebuild and Push Multi-Arch Manifest
 
 on:
   workflow_dispatch:
@@ -19,6 +19,7 @@ jobs:
 
     steps:
       - name: 确定要用的 TAG
+        id: set_tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "TAG=${{ github.event.inputs.ref_name }}" >> $GITHUB_ENV
@@ -26,13 +27,13 @@ jobs:
             echo "TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
           fi
 
-      - name: Login to DockerHub
+      - name: 登录 DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login to GHCR (GitHub Container Registry)
+      - name: 登录 GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -40,111 +41,133 @@ jobs:
           password: ${{ secrets.GITHUBTOKEN }}
 
       #####################################################################
-      # 步骤 1：先尝试直接拉取 “TAG-amd64” & “TAG-arm64”（带 --platform 标记）；
-      #         如果不存在，再从 “TAG”（manifest list）按平台提取并推
+      # 步骤 1：对于 amd64 和 arm64，各自生成一个“干净”的 solo 标签
       #####################################################################
 
-      - name: 准备并推送纯 amd64 镜像到 `${{ env.TAG }}-amd64`
+      - name: 生成并推送纯 amd64 的 “solo” 标签
         run: |
           set -e
-
           REPO_DOCKERHUB="docker.io/qyg2297248353/ammds"
           REPO_GHCR="ghcr.io/qyg2297248353/ammds"
           BASE_TAG="${TAG}"
-          AMD64_TAG="${BASE_TAG}-amd64"
+          ORIG_AMD64_TAG="${BASE_TAG}-amd64"
+          SOLO_AMD64_TAG="${BASE_TAG}-amd64-solo"
 
-          echo "==> 检查 DockerHub 上是否已有 “${AMD64_TAG}”（amd64 only）"
-          if docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${AMD64_TAG}; then
-            echo "✅ DockerHub 上已存在单架构 amd64 镜像：${AMD64_TAG}"
-            # 同步打到 GHCR
-            docker tag ${REPO_DOCKERHUB}:${AMD64_TAG} ${REPO_GHCR}:${AMD64_TAG}
-            docker push ${REPO_GHCR}:${AMD64_TAG}
+          echo "====> 处理 amd64 体系（检测并清洗）"
+
+          # 1.1 尝试 Inspect 远端 REPO:TAG-amd64，看是不是 manifest list（多架构）
+          if docker manifest inspect ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} 2>/dev/null | grep -q '\"mediaType\": \"application/vnd.docker.distribution.manifest.list.v2+json\"'; then
+            echo "⚠️ 发现远端 ${ORIG_AMD64_TAG} 是 Manifest List，需要提取 amd64 层"
+            # 拉取“多架构”的 amd64 层
+            docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG}
+            # 本地此时只有 amd64 层，打上 solo 标签
+            docker tag ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
+            docker push ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
+            # 同步到 GHCR
+            docker tag ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} ${REPO_GHCR}:${SOLO_AMD64_TAG}
+            docker push ${REPO_GHCR}:${SOLO_AMD64_TAG}
+          elif docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} 2>/dev/null; then
+            echo "✅ 远端存在纯 amd64 镜像 ${ORIG_AMD64_TAG}，但不确定类型，统一打成 solo"
+            # 一定要重新推一个 solo 标签，以便后面生成 manifest 时只引用“真正的单架构”
+            docker tag ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
+            docker push ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
+            # 同步到 GHCR
+            docker tag ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} ${REPO_GHCR}:${SOLO_AMD64_TAG}
+            docker push ${REPO_GHCR}:${SOLO_AMD64_TAG}
           else
-            echo "⚠️ DockerHub 上未找到单架构 amd64 镜像。回退到从多架构 “[${BASE_TAG}]” 提取 amd64 层。"
-            # 1. 拉取 “多架构” TAG 的 amd64 层
+            echo "⚠️ 远端没有 ${ORIG_AMD64_TAG} 或者拉取失败，回退到从 [${BASE_TAG}] 提取 amd64"
+            # 从多架构清单 BASE_TAG 里提取 amd64 层（如果 BASE_TAG 本身也不存在，会在此出错并失败）
             docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${BASE_TAG}
-
-            # 2. 给本地这个 amd64 镜像打上 “TAG-amd64” 并推送到 DockerHub
-            docker tag ${REPO_DOCKERHUB}:${BASE_TAG} ${REPO_DOCKERHUB}:${AMD64_TAG}
-            docker push ${REPO_DOCKERHUB}:${AMD64_TAG}
-
-            # 3. 同步打到 GHCR
-            docker tag ${REPO_DOCKERHUB}:${AMD64_TAG} ${REPO_GHCR}:${AMD64_TAG}
-            docker push ${REPO_GHCR}:${AMD64_TAG}
+            docker tag ${REPO_DOCKERHUB}:${BASE_TAG} ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
+            docker push ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
+            # 同步到 GHCR
+            docker tag ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} ${REPO_GHCR}:${SOLO_AMD64_TAG}
+            docker push ${REPO_GHCR}:${SOLO_AMD64_TAG}
           fi
 
-      - name: 准备并推送纯 arm64 镜像到 `${{ env.TAG }}-arm64`
+      - name: 生成并推送纯 arm64 的 “solo” 标签
         run: |
           set -e
-
           REPO_DOCKERHUB="docker.io/qyg2297248353/ammds"
           REPO_GHCR="ghcr.io/qyg2297248353/ammds"
           BASE_TAG="${TAG}"
-          ARM64_TAG="${BASE_TAG}-arm64"
+          ORIG_ARM64_TAG="${BASE_TAG}-arm64"
+          SOLO_ARM64_TAG="${BASE_TAG}-arm64-solo"
 
-          echo "==> 检查 DockerHub 上是否已有 “${ARM64_TAG}”（arm64 only）"
-          if docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${ARM64_TAG}; then
-            echo "✅ DockerHub 上已存在单架构 arm64 镜像：${ARM64_TAG}"
-            # 同步打到 GHCR
-            docker tag ${REPO_DOCKERHUB}:${ARM64_TAG} ${REPO_GHCR}:${ARM64_TAG}
-            docker push ${REPO_GHCR}:${ARM64_TAG}
+          echo "====> 处理 arm64 体系（检测并清洗）"
+
+          # 1.1 Inspect 远端 REPO:TAG-arm64，看是不是 Manifest List
+          if docker manifest inspect ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} 2>/dev/null | grep -q '\"mediaType\": \"application/vnd.docker.distribution.manifest.list.v2+json\"'; then
+            echo "⚠️ 发现远端 ${ORIG_ARM64_TAG} 是 Manifest List，需要提取 arm64 层"
+            docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG}
+            docker tag ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
+            docker push ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
+            # 同步到 GHCR
+            docker tag ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG} ${REPO_GHCR}:${SOLO_ARM64_TAG}
+            docker push ${REPO_GHCR}:${SOLO_ARM64_TAG}
+          elif docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} 2>/dev/null; then
+            echo "✅ 远端存在纯 arm64 镜像 ${ORIG_ARM64_TAG}，但不确定类型，统一打成 solo"
+            docker tag ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
+            docker push ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
+            # 同步到 GHCR
+            docker tag ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG} ${REPO_GHCR}:${SOLO_ARM64_TAG}
+            docker push ${REPO_GHCR}:${SOLO_ARM64_TAG}
           else
-            echo "⚠️ DockerHub 上未找到单架构 arm64 镜像。回退到从多架构 “[${BASE_TAG}]” 提取 arm64 层。"
-            # 1. 拉取 “多架构” TAG 的 arm64 层
+            echo "⚠️ 远端没有 ${ORIG_ARM64_TAG} 或者拉取失败，回退到从 [${BASE_TAG}] 提取 arm64"
             docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${BASE_TAG}
-
-            # 2. 给本地这个 arm64 镜像打上 “TAG-arm64” 并推送到 DockerHub
-            docker tag ${REPO_DOCKERHUB}:${BASE_TAG} ${REPO_DOCKERHUB}:${ARM64_TAG}
-            docker push ${REPO_DOCKERHUB}:${ARM64_TAG}
-
-            # 3. 同步打到 GHCR
-            docker tag ${REPO_DOCKERHUB}:${ARM64_TAG} ${REPO_GHCR}:${ARM64_TAG}
-            docker push ${REPO_GHCR}:${ARM64_TAG}
+            docker tag ${REPO_DOCKERHUB}:${BASE_TAG} ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
+            docker push ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
+            # 同步到 GHCR
+            docker tag ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG} ${REPO_GHCR}:${SOLO_ARM64_TAG}
+            docker push ${REPO_GHCR}:${SOLO_ARM64_TAG}
           fi
 
       #####################################################################
-      # 步骤 2：现在远端一定存在 “TAG-amd64”（纯 amd64） 和 “TAG-arm64”（纯 arm64）
-      #         对它们进行多架构 manifest 合并并推送
+      # 步骤 2：用 “solo” 标签生成新的多架构 manifest
       #####################################################################
 
-      - name: Create and push DockerHub multi-arch manifest for `${{ env.TAG }}`
+      - name: 在 DockerHub 上创建并推送 multi-arch Manifest `${{ env.TAG }}`
         run: |
           set -e
           REPO_DOCKERHUB="docker.io/qyg2297248353/ammds"
           BASE_TAG="${TAG}"
+          SOLO_AMD64_TAG="${BASE_TAG}-amd64-solo"
+          SOLO_ARM64_TAG="${BASE_TAG}-arm64-solo"
 
-          echo "==> 在 DockerHub 上为 ${BASE_TAG} 创建多架构 manifest..."
+          echo "====> 在 DockerHub 上创建 multi-arch manifest: ${BASE_TAG}"
           docker manifest create ${REPO_DOCKERHUB}:${BASE_TAG} \
-            --amend ${REPO_DOCKERHUB}:${BASE_TAG}-amd64 \
-            --amend ${REPO_DOCKERHUB}:${BASE_TAG}-arm64
+            --amend ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} \
+            --amend ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
 
-          echo "==> 推送 DockerHub 上的 manifest:${BASE_TAG}..."
+          echo "====> 推送 DockerHub 上的 manifest:${BASE_TAG}"
           docker manifest push ${REPO_DOCKERHUB}:${BASE_TAG}
 
-          echo "==> 同时为 latest 创建多架构 manifest（可选）"
+          # （可选）为 latest 生成一份 multi-arch
+          echo "====> 同时为 DockerHub 上的 latest 创建 multi-arch manifest"
           docker manifest create ${REPO_DOCKERHUB}:latest \
-            --amend ${REPO_DOCKERHUB}:${BASE_TAG}-amd64 \
-            --amend ${REPO_DOCKERHUB}:${BASE_TAG}-arm64
-
+            --amend ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} \
+            --amend ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
           docker manifest push ${REPO_DOCKERHUB}:latest
 
-      - name: Create and push GHCR multi-arch manifest for `${{ env.TAG }}`
+      - name: 在 GHCR 上创建并推送 multi-arch Manifest `${{ env.TAG }}`
         run: |
           set -e
           REPO_GHCR="ghcr.io/qyg2297248353/ammds"
           BASE_TAG="${TAG}"
+          SOLO_AMD64_TAG="${BASE_TAG}-amd64-solo"
+          SOLO_ARM64_TAG="${BASE_TAG}-arm64-solo"
 
-          echo "==> 在 GHCR 上为 ${BASE_TAG} 创建多架构 manifest..."
+          echo "====> 在 GHCR 上创建 multi-arch manifest: ${BASE_TAG}"
           docker manifest create ${REPO_GHCR}:${BASE_TAG} \
-            --amend ${REPO_GHCR}:${BASE_TAG}-amd64 \
-            --amend ${REPO_GHCR}:${BASE_TAG}-arm64
+            --amend ${REPO_GHCR}:${SOLO_AMD64_TAG} \
+            --amend ${REPO_GHCR}:${SOLO_ARM64_TAG}
 
-          echo "==> 推送 GHCR 上的 manifest:${BASE_TAG}..."
+          echo "====> 推送 GHCR 上的 manifest:${BASE_TAG}"
           docker manifest push ${REPO_GHCR}:${BASE_TAG}
 
-          echo "==> 同时为 latest 创建多架构 manifest（可选）"
+          # （可选）为 latest 生成一份 multi-arch
+          echo "====> 同时为 GHCR 上的 latest 创建 multi-arch manifest"
           docker manifest create ${REPO_GHCR}:latest \
-            --amend ${REPO_GHCR}:${BASE_TAG}-amd64 \
-            --amend ${REPO_GHCR}:${BASE_TAG}-arm64
-
+            --amend ${REPO_GHCR}:${SOLO_AMD64_TAG} \
+            --amend ${REPO_GHCR}:${SOLO_ARM64_TAG}
           docker manifest push ${REPO_GHCR}:latest
