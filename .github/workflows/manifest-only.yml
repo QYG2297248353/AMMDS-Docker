@@ -1,0 +1,74 @@
+name: create-and-push-manifest
+
+# 这里演示两种触发方式，你可以保留一种或两种：
+on:
+  # 手动触发（在 Actions → “Run workflow” 中选择分支和 ref_name）
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: '要打 Manifest 的镜像标签（如 v1.6.10）'
+        required: true
+        default: 'v1.0.0'
+  # 或者在发布时自动触发（仅当 target_commitish 为 master 时）
+  release:
+    types: [created]
+
+jobs:
+  create-manifest:
+    # 如果你采用 release 触发，可加上以下判断：
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'release' && github.event.release.target_commitish == 'master')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 准备好要用到的标签
+        run: |
+          # 如果是 workflow_dispatch 触发，就用用户输入的 ref_name；否则用 release 名称
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG=${{ github.event.inputs.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          fi
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Packages (GHCR)
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Create and push DockerHub manifest
+        run: |
+          # 1) 用带前缀的全路径，确保引用的是 已经存在的单平台镜像
+          docker manifest create docker.io/qyg2297248353/ammds:${TAG} \
+            --amend docker.io/qyg2297248353/ammds:${TAG}-amd64 \
+            --amend docker.io/qyg2297248353/ammds:${TAG}-arm64
+
+          docker manifest push docker.io/qyg2297248353/ammds:${TAG}
+
+          # 2) 同时为 latest 标签再生成一个 manifest list（可选）
+          docker manifest create docker.io/qyg2297248353/ammds:latest \
+            --amend docker.io/qyg2297248353/ammds:${TAG}-amd64 \
+            --amend docker.io/qyg2297248353/ammds:${TAG}-arm64
+
+          docker manifest push docker.io/qyg2297248353/ammds:latest
+
+      - name: Create and push GHCR manifest
+        run: |
+          docker manifest create ghcr.io/qyg2297248353/ammds:${TAG} \
+            --amend ghcr.io/qyg2297248353/ammds:${TAG}-amd64 \
+            --amend ghcr.io/qyg2297248353/ammds:${TAG}-arm64
+
+          docker manifest push ghcr.io/qyg2297248353/ammds:${TAG}
+
+          docker manifest create ghcr.io/qyg2297248353/ammds:latest \
+            --amend ghcr.io/qyg2297248353/ammds:${TAG}-amd64 \
+            --amend ghcr.io/qyg2297248353/ammds:${TAG}-arm64
+
+          docker manifest push ghcr.io/qyg2297248353/ammds:latest
