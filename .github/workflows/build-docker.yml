@@ -1,4 +1,4 @@
-name: Build and Publish Multi-Arch Docker Image
+name: build docker image
 
 on:
   push:
