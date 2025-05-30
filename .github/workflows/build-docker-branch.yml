@@ -19,6 +19,9 @@ jobs:
       - name: Checkout private repo (AMMDS)
         run: |
           git clone --branch ${{ github.event.release.target_commitish }} https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
+          cd ammds-source
+          git lfs install --skip-smudge
+          git lfs pull --exclude="*" --include=""
 
       - name: Print GitHub context
         run: |
