@@ -18,10 +18,10 @@ jobs:
 
       - name: Clone AMMDS source without LFS files
         run: |
+          git lfs install --skip-smudge
           git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
           cd ammds-source
-          git lfs install --skip-smudge
-          git lfs pull --exclude="*" --include=""
+          git lfs pull --exclude="*"
 
       - name: Print GitHub context
         run: |
