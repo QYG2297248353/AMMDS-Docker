@@ -152,6 +152,8 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 **🙏 感谢每一位捐赠者的支持！你们是开源前进的动力。**
 
+⚡爱发电赞助
+
 <!-- AFDIAN-ACTION:START -->
 
 <!-- 头像展示区 -->
@@ -261,6 +263,21 @@ alt="爱发电用户_AFGN">
 </details>
 
 <!-- AFDIAN-ACTION:END -->
+
+⚡商店赞助
+
+<div align="center">
+<a href="mailto:2126263229@qq.com" 
+title="2126263229"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://q.qlogo.cn/g?b=qq&nk=2126263229&s=640" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="2126263229">
+</a>
+</div>
 
 ---
 
