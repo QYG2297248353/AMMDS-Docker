@@ -18,24 +18,24 @@ env:
   REPO_GHCR:      ghcr.io/qyg2297248353/ammds
 
 jobs:
-  # 1) 统一计算 TAG 并输出
+  # 1. 统一计算 tag
   set-tag:
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.calc.outputs.tag }}
+      tag: ${{ steps.calc_tag.outputs.tag }}
     steps:
-      - id: calc
+      - id: calc_tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "release" ]; then
             echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
-            branch=${GITHUB_REF#refs/heads/}
-            echo "tag=$branch" >> $GITHUB_OUTPUT
+            BRANCH=${GITHUB_REF#refs/heads/}
+            echo "tag=$BRANCH" >> $GITHUB_OUTPUT
           fi
 
-  # 1.5) 检查 ol8 multi-arch manifest 是否已存在，决定是否跳过构建
+  # 1.5 检查两个架构镜像是否都已存在
   check-images-ol8:
     needs: set-tag
     runs-on: ubuntu-latest
@@ -48,50 +48,39 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Check if both arch images exist on DockerHub
+      - name: Check if arch images exist
         id: check
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-      
-          AMD_IMAGE=${{ env.REPO_DOCKERHUB }}:$TAG-ol8-amd64
-          ARM_IMAGE=${{ env.REPO_DOCKERHUB }}:$TAG-ol8-arm64
-      
-          AMD_EXISTS=$(docker buildx imagetools inspect "$AMD_IMAGE" > /dev/null 2>&1 && echo yes || echo no)
-          ARM_EXISTS=$(docker buildx imagetools inspect "$ARM_IMAGE" > /dev/null 2>&1 && echo yes || echo no)
-      
-          echo "AMD_EXISTS=$AMD_EXISTS"
-          echo "ARM_EXISTS=$ARM_EXISTS"
-      
-          if [[ "$AMD_EXISTS" == "yes" && "$ARM_EXISTS" == "yes" ]]; then
+          AMD="${{ env.REPO_DOCKERHUB }}:$TAG-ol8-amd64"
+          ARM="${{ env.REPO_DOCKERHUB }}:$TAG-ol8-arm64"
+
+          AMD_OK=$(docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 && echo yes || echo no)
+          ARM_OK=$(docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 && echo yes || echo no)
+
+          echo "AMD_OK=$AMD_OK, ARM_OK=$ARM_OK"
+          if [[ "$AMD_OK" == "yes" && "$ARM_OK" == "yes" ]]; then
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Debug inspect
-        run: |
-          docker buildx imagetools inspect ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-ol8-amd64 || echo "inspect failed"
-  
-      - name: Debug skip_build output
-        run: echo "SKIP_BUILD=${{ steps.check.outputs.skip_build }}"
+      - name: Debug skip_build
+        run: echo "skip_build=${{ steps.check.outputs.skip_build }}"
 
-  # 2a) 构建 amd64-ol8 单架构
+  # 2a. 并行：构建 amd64（若 skip_build=false）
   build-amd64-ol8:
-    needs: [set-tag, check-images-ol8]
-    if: needs.check-images-ol8.outputs.skip_build != 'true'
+    needs: [ set-tag, check-images-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Clone AMMDS (no LFS)
-        run: |
+      - run: |
           git lfs install --skip-smudge
-          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source && git lfs pull --exclude="*"
-
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source && git lfs pull --exclude="*"
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
-
       - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -101,35 +90,30 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
-
       - name: Build & push amd64-ol8
         uses: docker/build-push-action@v4
         with:
-          context: ./ammds-source
-          file:    ./ammds-source/Dockerfile-OL8
+          context: ./source
+          file: ./source/Dockerfile-OL8
           platforms: linux/amd64
           push:      true
           tags: |
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-ol8-amd64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-ol8-amd64
 
-  # 2b) 构建 arm64-ol8 单架构
+  # 2b. 并行：构建 arm64（若 skip_build=false）
   build-arm64-ol8:
-    needs: [set-tag, check-images-ol8]
-    if: needs.check-images-ol8.outputs.skip_build != 'true'
+    needs: [ set-tag, check-images-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Clone AMMDS (no LFS)
-        run: |
+      - run: |
           git lfs install --skip-smudge
-          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source && git lfs pull --exclude="*"
-
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source && git lfs pull --exclude="*"
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
-
       - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -139,19 +123,49 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
-
       - name: Build & push arm64-ol8
         uses: docker/build-push-action@v4
         with:
-          context: ./ammds-source
-          file:    ./ammds-source/Dockerfile-OL8
+          context: ./source
+          file: ./source/Dockerfile-OL8
           platforms: linux/arm64
           push:      true
           tags: |
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-ol8-arm64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-ol8-arm64
 
-  # 3) 合并成 ol8 双架构 manifest（不 touch latest）
+  # 3a. 如果跳过构建（skip_build=true），立刻合并 manifest
+  manifest-skip:
+    needs: [ set-tag, check-images-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+      - uses: docker/setup-buildx-action@v2
+
+      - name: Create & push DockerHub manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG --push \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+
+      - name: Create & push GHCR manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG --push \
+            ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            ${{ env.REPO_GHCR }}:$TAG-arm64
+
+  
   create-manifest-ol8:
     needs: [set-tag, check-images-ol8]
     if: needs.check-images-ol8.outputs.skip_build == 'true' || needs.check-images-ol8.outputs.skip_build == 'false'
@@ -182,3 +196,34 @@ jobs:
             --amend ${{ env.REPO_GHCR }}:$TAG-ol8-amd64 \
             --amend ${{ env.REPO_GHCR }}:$TAG-ol8-arm64
           docker manifest push ${{ env.REPO_GHCR }}:$TAG-ol8
+
+  # 3b. 如果没跳过（skip_build=false），等两架构构建完成后再合并
+  manifest-after-build:
+    needs: [ set-tag, check-images-ol8, build-amd64-ol8, build-arm64-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+      - uses: docker/setup-buildx-action@v2
+
+      - name: Create & push DockerHub manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG --push \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+
+      - name: Create & push GHCR manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG --push \
+            ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            ${{ env.REPO_GHCR }}:$TAG-arm64
