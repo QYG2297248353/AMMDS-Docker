@@ -48,11 +48,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
   
-      - name: Check if multi-arch manifest exists on DockerHub
+      - name: Check if both arch images exist on DockerHub
         id: check
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          if docker buildx imagetools inspect ${{ env.REPO_DOCKERHUB }}:$TAG > /dev/null 2>&1; then
+      
+          AMD_IMAGE=${{ env.REPO_DOCKERHUB }}:$TAG-amd64
+          ARM_IMAGE=${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+      
+          AMD_EXISTS=$(docker buildx imagetools inspect "$AMD_IMAGE" > /dev/null 2>&1 && echo yes || echo no)
+          ARM_EXISTS=$(docker buildx imagetools inspect "$ARM_IMAGE" > /dev/null 2>&1 && echo yes || echo no)
+      
+          echo "AMD_EXISTS=$AMD_EXISTS"
+          echo "ARM_EXISTS=$ARM_EXISTS"
+      
+          if [[ "$AMD_EXISTS" == "yes" && "$ARM_EXISTS" == "yes" ]]; then
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
             echo "skip_build=false" >> $GITHUB_OUTPUT
