@@ -153,20 +153,21 @@ jobs:
       - name: Create & push DockerHub manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG --push \
+          # 去掉 --push
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest --push \
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG --push \
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest --push \
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
 
@@ -190,19 +191,19 @@ jobs:
       - name: Create & push DockerHub manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG --push \
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest --push \
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG --push \
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest --push \
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
