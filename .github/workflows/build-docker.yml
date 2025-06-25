@@ -153,7 +153,6 @@ jobs:
       - name: Create & push DockerHub manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          # 去掉 --push
           docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
