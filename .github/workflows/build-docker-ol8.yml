@@ -48,17 +48,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Inspect existing OL8 manifest
+      - name: Check if multi-arch manifest exists on DockerHub
         id: check
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}-ol8
-          if docker manifest inspect ${{ env.REPO_DOCKERHUB }}:$TAG > /dev/null 2>&1; then
+          TAG=${{ needs.set-tag.outputs.tag }}
+          if docker buildx imagetools inspect ${{ env.REPO_DOCKERHUB }}:$TAG > /dev/null 2>&1; then
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
-      - name: Debug skip_build output
-        run: echo "SKIP_BUILD=${{ steps.check.outputs.skip_build }}"
+
+      - name: Debug inspect
+        run: |
+          docker buildx imagetools inspect ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }} || echo "inspect failed"
 
   # 2a) 构建 amd64-ol8 单架构
   build-amd64-ol8:
