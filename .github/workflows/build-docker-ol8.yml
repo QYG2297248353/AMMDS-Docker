@@ -154,48 +154,17 @@ jobs:
       - name: Create & push DockerHub manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}-ol8
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG --push \
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}-ol8
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG --push \
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
 
-  
-  create-manifest-ol8:
-    needs: [set-tag, check-images-ol8]
-    if: needs.check-images-ol8.outputs.skip_build == 'true' || needs.check-images-ol8.outputs.skip_build == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
-
-      - name: Create & push DockerHub ol8 manifest
-        run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          docker manifest create ${{ env.REPO_DOCKERHUB }}:$TAG-ol8 \
-            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-ol8-amd64 \
-            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-ol8-arm64
-          docker manifest push ${{ env.REPO_DOCKERHUB }}:$TAG-ol8
-
-      - name: Create & push GHCR ol8 manifest
-        run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          docker manifest create ${{ env.REPO_GHCR }}:$TAG-ol8 \
-            --amend ${{ env.REPO_GHCR }}:$TAG-ol8-amd64 \
-            --amend ${{ env.REPO_GHCR }}:$TAG-ol8-arm64
-          docker manifest push ${{ env.REPO_GHCR }}:$TAG-ol8
 
   # 3b. 如果没跳过（skip_build=false），等两架构构建完成后再合并
   manifest-after-build:
@@ -217,13 +186,13 @@ jobs:
       - name: Create & push DockerHub manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}-ol8
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG --push \
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}-ol8
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG --push \
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
