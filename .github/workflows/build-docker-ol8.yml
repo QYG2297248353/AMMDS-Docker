@@ -1,0 +1,206 @@
+name: build docker ol8 image
+
+on:
+  push:
+    branches:
+      - release
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: '镜像标签（如 v1.6.10）'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
+  REPO_GHCR:      ghcr.io/qyg2297248353/ammds
+
+jobs:
+  # 先统一计算 TAG
+  set-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      TAG: ${{ env.TAG }}
+    steps:
+      - name: Set TAG
+        id: set_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG=${{ github.event.inputs.ref_name }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          else
+            # push 到 release 分支，取分支名作为 TAG
+            BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            echo "TAG=${BRANCH_NAME}" >> $GITHUB_ENV
+          fi
+
+  build-amd64:
+    needs: set-tag
+    if: needs.set-tag.outputs.TAG != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout workflow repo
+        uses: actions/checkout@v3
+
+      - name: Clone AMMDS source without LFS files
+        run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
+          cd ammds-source
+          git lfs pull --exclude="*"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Build and push amd64 image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./ammds-source
+          file:    ./ammds-source/Dockerfile-OL8
+          platforms: linux/amd64
+          push:      true
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ env.TAG }}-ol8-amd64
+            ${{ env.REPO_GHCR }}:${{ env.TAG }}-ol8-amd64
+
+  build-arm64:
+    needs: set-tag
+    if: needs.set-tag.outputs.TAG != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout workflow repo
+        uses: actions/checkout@v3
+
+      - name: Clone AMMDS source without LFS files
+        run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
+          cd ammds-source
+          git lfs pull --exclude="*"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Build and push arm64 image
+        uses: docker/build-push-action@v4
+        with:
+          context:   ./ammds-source
+          file:      ./ammds-source/Dockerfile-OL8
+          platforms: linux/arm64
+          push:      true
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ env.TAG }}-ol8-arm64
+            ${{ env.REPO_GHCR }}:${{ env.TAG }}-ol8-arm64
+
+  create-manifest:
+    needs: [build-amd64, build-arm64]
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.target_commitish == 'master')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Generate and push solo amd64 tag
+        run: |
+          set -e
+          BASE_TAG="${TAG}"
+          ORIG_AMD64="${REPO_DOCKERHUB}:${BASE_TAG}-ol8-amd64"
+          SOLO_AMD64="${REPO_DOCKERHUB}:${BASE_TAG}-ol8-amd64-solo"
+
+          if docker manifest inspect ${ORIG_AMD64} 2>/dev/null | grep -q 'manifest.list'; then
+            docker pull --platform=linux/amd64 ${ORIG_AMD64}
+          else
+            docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${BASE_TAG}
+          fi
+          docker tag ${ORIG_AMD64} ${SOLO_AMD64}
+          docker push ${SOLO_AMD64}
+          docker tag ${SOLO_AMD64} ${REPO_GHCR}:${BASE_TAG}-ol8-amd64-solo
+          docker push ${REPO_GHCR}:${BASE_TAG}-ol8-amd64-solo
+
+      - name: Generate and push solo arm64 tag
+        run: |
+          set -e
+          BASE_TAG="${TAG}"
+          ORIG_ARM64="${REPO_DOCKERHUB}:${BASE_TAG}-ol8-arm64"
+          SOLO_ARM64="${REPO_DOCKERHUB}:${BASE_TAG}-ol8-arm64-solo"
+
+          if docker manifest inspect ${ORIG_ARM64} 2>/dev/null | grep -q 'manifest.list'; then
+            docker pull --platform=linux/arm64 ${ORIG_ARM64}
+          else
+            docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${BASE_TAG}
+          fi
+          docker tag ${ORIG_ARM64} ${SOLO_ARM64}
+          docker push ${SOLO_ARM64}
+          docker tag ${SOLO_ARM64} ${REPO_GHCR}:${BASE_TAG}-ol8-arm64-solo
+          docker push ${REPO_GHCR}:${BASE_TAG}-ol8-arm64-solo
+
+      - name: Create and push DockerHub multi-arch manifest
+        run: |
+          set -e
+          docker manifest create ${REPO_DOCKERHUB}:${TAG} \
+            --amend ${REPO_DOCKERHUB}:${TAG}-ol8-amd64-solo \
+            --amend ${REPO_DOCKERHUB}:${TAG}-ol8-arm64-solo
+          docker manifest push ${REPO_DOCKERHUB}:${TAG}
+          # 更新 latest
+          docker manifest create ${REPO_DOCKERHUB}:latest \
+            --amend ${REPO_DOCKERHUB}:${TAG}-ol8-amd64-solo \
+            --amend ${REPO_DOCKERHUB}:${TAG}-ol8-arm64-solo
+          docker manifest push ${REPO_DOCKERHUB}:latest
+
+      - name: Create and push GHCR multi-arch manifest
+        run: |
+          set -e
+          docker manifest create ${REPO_GHCR}:${TAG} \
+            --amend ${REPO_GHCR}:${TAG}-ol8-amd64-solo \
+            --amend ${REPO_GHCR}:${TAG}-ol8-arm64-solo
+          docker manifest push ${REPO_GHCR}:${TAG}
+          # 更新 latest
+          docker manifest create ${REPO_GHCR}:latest \
+            --amend ${REPO_GHCR}:${TAG}-ol8-amd64-solo \
+            --amend ${REPO_GHCR}:${TAG}-ol8-arm64-solo
+          docker manifest push ${REPO_GHCR}:latest
