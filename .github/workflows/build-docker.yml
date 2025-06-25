@@ -64,7 +64,7 @@ jobs:
   # 2a. 构建 amd64 单架构镜像
   build-amd64:
     needs: [set-tag, check-images]
-    if: ${{ needs.check-images.outputs.skip_build == 'false' }}
+    if: needs.check-images.outputs.skip_build != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -109,7 +109,7 @@ jobs:
   # 2b. 构建 arm64 单架构镜像
   build-arm64:
     needs: [set-tag, check-images]
-    if: ${{ needs.check-images.outputs.skip_build == 'false' }}
+    if: needs.check-images.outputs.skip_build != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
