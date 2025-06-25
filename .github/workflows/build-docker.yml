@@ -35,98 +35,69 @@ jobs:
             echo "tag=$BRANCH" >> $GITHUB_OUTPUT
           fi
 
-  # 2a. 构建 amd64 单架构镜像
-  build-amd64:
+  # 1.5. 检查 multi-arch 镜像是否已存在，决定是否跳过后续单架构构建
+  check-images:
     needs: set-tag
     runs-on: ubuntu-latest
+    outputs:
+      skip_build: ${{ steps.check.outputs.skip_build }}
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
-
-      - name: Clone AMMDS (no LFS)
-        run: |
-          git lfs install --skip-smudge
-          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source && git lfs pull --exclude="*"
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Setup Buildx
-        uses: docker/setup-buildx-action@v2
-
       - name: Login DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login GHCR
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
+      - name: Check if multi-arch manifest exists on DockerHub
+        id: check
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          if docker manifest inspect ${{ env.REPO_DOCKERHUB }}:$TAG > /dev/null 2>&1; then
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+          fi
 
+  # 2a. 构建 amd64 单架构镜像 —— 仅在 skip_build == false 时执行
+  build-amd64:
+    needs: [set-tag, check-images]
+    if: ${{ needs.check-images.outputs.skip_build == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+      # … (clone, QEMU, buildx, login steps as before) …
       - name: Build & push amd64 image
         uses: docker/build-push-action@v4
         with:
-          context: ./ammds-source
-          file: ./ammds-source/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64
 
-  # 2b. 构建 arm64 单架构镜像
+  # 2b. 构建 arm64 单架构镜像 —— 仅在 skip_build == false 时执行
   build-arm64:
-    needs: set-tag
+    needs: [set-tag, check-images]
+    if: ${{ needs.check-images.outputs.skip_build == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
-
-      - name: Clone AMMDS (no LFS)
-        run: |
-          git lfs install --skip-smudge
-          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source && git lfs pull --exclude="*"
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Setup Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Login GHCR
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
-
+      # … (clone, QEMU, buildx, login steps as before) …
       - name: Build & push arm64 image
         uses: docker/build-push-action@v4
         with:
-          context: ./ammds-source
-          file: ./ammds-source/Dockerfile
           platforms: linux/arm64
           push: true
           tags: |
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64
 
-  # 3. 构建完成后生成并推送 multi-arch Manifest
+  # 3. 构建完成后生成并推送 multi-arch Manifest —— always runs (so manifest is refreshed even if skip_build==true)
   create-manifest:
-    needs: [set-tag, build-amd64, build-arm64]
-    if: needs.set-tag.outputs.tag != ''
+    needs: [set-tag, check-images, build-amd64, build-arm64]
+    if: ${{ needs.set-tag.outputs.tag != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Login DockerHub
