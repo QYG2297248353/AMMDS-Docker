@@ -1,4 +1,4 @@
-name: build docker ol8 image
+name: Build & Publish OL8 Docker Images
 
 on:
   push:
