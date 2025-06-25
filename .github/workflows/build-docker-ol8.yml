@@ -18,36 +18,35 @@ env:
   REPO_GHCR:      ghcr.io/qyg2297248353/ammds
 
 jobs:
-  # 1. 先统一计算出 TAG，并通过 outputs 传递给下游 jobs
+  # 1) 统一计算 TAG 并输出
   set-tag:
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.set_tag.outputs.tag }}
+      tag: ${{ steps.calc.outputs.tag }}
     steps:
-      - id: set_tag
+      - id: calc
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "release" ]; then
             echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
-            BRANCH=${GITHUB_REF#refs/heads/}
-            echo "tag=$BRANCH" >> $GITHUB_OUTPUT
+            branch=${GITHUB_REF#refs/heads/}
+            echo "tag=$branch" >> $GITHUB_OUTPUT
           fi
 
-  # 2. AMD64 构建
-  build-amd64:
+  # 2a) 构建 amd64-ol8 单架构
+  build-amd64-ol8:
     needs: set-tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Clone AMMDS source without LFS files
+      - name: Clone AMMDS (no LFS)
         run: |
           git lfs install --skip-smudge
           git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source
-          git lfs pull --exclude="*"
+          cd ammds-source && git lfs pull --exclude="*"
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
@@ -56,14 +55,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
 
-      - name: Build and push amd64-ol8 image
+      - name: Build & push amd64-ol8
         uses: docker/build-push-action@v4
         with:
           context: ./ammds-source
@@ -74,19 +72,18 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-ol8-amd64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-ol8-amd64
 
-  # 3. ARM64 构建
-  build-arm64:
+  # 2b) 构建 arm64-ol8 单架构
+  build-arm64-ol8:
     needs: set-tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Clone AMMDS source without LFS files
+      - name: Clone AMMDS (no LFS)
         run: |
           git lfs install --skip-smudge
           git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source
-          git lfs pull --exclude="*"
+          cd ammds-source && git lfs pull --exclude="*"
 
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
@@ -95,14 +92,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
 
-      - name: Build and push arm64-ol8 image
+      - name: Build & push arm64-ol8
         uses: docker/build-push-action@v4
         with:
           context: ./ammds-source
@@ -113,45 +109,34 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-ol8-arm64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-ol8-arm64
 
-  # 4. Multi-arch manifest（可选，如果需要）
-  create-manifest:
-    needs: [build-amd64, build-arm64]
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.target_commitish == 'master')
+  # 3) 合并成 ol8 双架构 manifest（不 touch latest）
+  create-manifest-ol8:
+    needs: [build-amd64-ol8, build-arm64-ol8]
+    if: needs.set-tag.outputs.tag != ''
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
 
-      - name: Create and push DockerHub multi-arch manifest
+      - name: Create & push DockerHub ol8 manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker manifest create ${{ env.REPO_DOCKERHUB }}:$TAG \
+          docker manifest create ${{ env.REPO_DOCKERHUB }}:$TAG-ol8 \
             --amend ${{ env.REPO_DOCKERHUB }}:$TAG-ol8-amd64 \
             --amend ${{ env.REPO_DOCKERHUB }}:$TAG-ol8-arm64
-          docker manifest push ${{ env.REPO_DOCKERHUB }}:$TAG
-          # 更新 latest
-          docker manifest create ${{ env.REPO_DOCKERHUB }}:latest \
-            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-ol8-amd64 \
-            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-ol8-arm64
-          docker manifest push ${{ env.REPO_DOCKERHUB }}:latest
+          docker manifest push ${{ env.REPO_DOCKERHUB }}:$TAG-ol8
 
-      - name: Create and push GHCR multi-arch manifest
+      - name: Create & push GHCR ol8 manifest
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker manifest create ${{ env.REPO_GHCR }}:$TAG \
+          docker manifest create ${{ env.REPO_GHCR }}:$TAG-ol8 \
             --amend ${{ env.REPO_GHCR }}:$TAG-ol8-amd64 \
             --amend ${{ env.REPO_GHCR }}:$TAG-ol8-arm64
-          docker manifest push ${{ env.REPO_GHCR }}:$TAG
-          # 更新 latest
-          docker manifest create ${{ env.REPO_GHCR }}:latest \
-            --amend ${{ env.REPO_GHCR }}:$TAG-ol8-amd64 \
-            --amend ${{ env.REPO_GHCR }}:$TAG-ol8-arm64
-          docker manifest push ${{ env.REPO_GHCR }}:latest
+          docker manifest push ${{ env.REPO_GHCR }}:$TAG-ol8
