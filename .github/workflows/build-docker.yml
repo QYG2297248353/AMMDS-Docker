@@ -1,4 +1,4 @@
-name: build docker image
+name: Build & Publish Docker Images
 
 on:
   push:
@@ -15,43 +15,60 @@ on:
 
 env:
   REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
-  REPO_GHCR: ghcr.io/qyg2297248353/ammds
+  REPO_GHCR:      ghcr.io/qyg2297248353/ammds
 
 jobs:
+  # 1. 先统一计算 TAG，并输出给后续作业
+  set-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.calc_tag.outputs.tag }}
+    steps:
+      - id: calc_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            BRANCH=${GITHUB_REF#refs/heads/}
+            echo "tag=$BRANCH" >> $GITHUB_OUTPUT
+          fi
+
+  # 2a. 构建 amd64 单架构镜像
   build-amd64:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release')) || (github.event_name == 'release' && github.event.release.target_commitish == 'master')
+    needs: set-tag
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout workflow repo
+      - name: Checkout source
         uses: actions/checkout@v3
 
-      - name: Clone AMMDS source without LFS files
+      - name: Clone AMMDS (no LFS)
         run: |
           git lfs install --skip-smudge
           git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source
-          git lfs pull --exclude="*"
+          cd ammds-source && git lfs pull --exclude="*"
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v2
 
-      - name: Set up Docker Buildx
+      - name: Setup Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Login to DockerHub
+      - name: Login DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login to GHCR
+      - name: Login GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
 
-      - name: Build and push amd64 image
+      - name: Build & push amd64 image
         uses: docker/build-push-action@v4
         with:
           context: ./ammds-source
@@ -59,43 +76,43 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ env.REPO_DOCKERHUB }}:${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref_name || github.ref_name }}-amd64
-            ${{ env.REPO_GHCR }}:${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref_name || github.ref_name }}-amd64
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64
 
+  # 2b. 构建 arm64 单架构镜像
   build-arm64:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release')) || (github.event_name == 'release' && github.event.release.target_commitish == 'master')
+    needs: set-tag
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout workflow repo
+      - name: Checkout source
         uses: actions/checkout@v3
 
-      - name: Clone AMMDS source without LFS files
+      - name: Clone AMMDS (no LFS)
         run: |
           git lfs install --skip-smudge
           git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git ammds-source
-          cd ammds-source
-          git lfs pull --exclude="*"
+          cd ammds-source && git lfs pull --exclude="*"
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v2
 
-      - name: Set up Docker Buildx
+      - name: Setup Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Login to DockerHub
+      - name: Login DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Login to GHCR
+      - name: Login GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
 
-      - name: Build and push arm64 image
+      - name: Build & push arm64 image
         uses: docker/build-push-action@v4
         with:
           context: ./ammds-source
@@ -103,144 +120,52 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-            ${{ env.REPO_DOCKERHUB }}:${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref_name || github.ref_name }}-arm64
-            ${{ env.REPO_GHCR }}:${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref_name || github.ref_name }}-arm64
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64
 
+  # 3. 构建完成后生成并推送 multi-arch Manifest
   create-manifest:
     needs: [build-amd64, build-arm64]
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.target_commitish == 'master')
+    if: needs.set-tag.outputs.tag != ''
     runs-on: ubuntu-latest
-
     steps:
-      - name: 确定要用的 TAG
-        id: set_tag
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "TAG=${{ github.event.inputs.ref_name }}" >> $GITHUB_ENV
-          else
-            echo "TAG=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
-          fi
-
-      - name: 登录 DockerHub
+      - name: Login DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 登录 GHCR
+      - name: Login GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
 
-      #####################################################################
-      # 步骤 1：对于 amd64 和 arm64，各自生成一个“干净”的 solo 标签
-      #####################################################################
-
-      - name: 生成并推送纯 amd64 的 “solo” 标签
+      - name: Create & push DockerHub multi-arch manifest
         run: |
-          set -e
-          BASE_TAG="${TAG}"
-          ORIG_AMD64_TAG="${BASE_TAG}-amd64"
-          SOLO_AMD64_TAG="${BASE_TAG}-amd64-solo"
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker manifest create ${{ env.REPO_DOCKERHUB }}:$TAG \
+            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+          docker manifest push ${{ env.REPO_DOCKERHUB }}:$TAG
 
-          echo "====> 处理 amd64（检测并清洗）"
-          # 检查远端 ORIG_AMD64_TAG 是否为 Manifest List
-          if docker manifest inspect ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} 2>/dev/null | grep -q '\"mediaType\": \"application/vnd.docker.distribution.manifest.list.v2+json\"'; then
-            echo "⚠️ 发现 ${ORIG_AMD64_TAG} 是 Manifest List，提取 amd64 层"
-            docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
-            docker push ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} ${REPO_GHCR}:${SOLO_AMD64_TAG}
-            docker push ${REPO_GHCR}:${SOLO_AMD64_TAG}
-          elif docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} 2>/dev/null; then
-            echo "✅ 远端存在纯 amd64 镜像 ${ORIG_AMD64_TAG}，打成 solo"
-            docker tag ${REPO_DOCKERHUB}:${ORIG_AMD64_TAG} ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
-            docker push ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} ${REPO_GHCR}:${SOLO_AMD64_TAG}
-            docker push ${REPO_GHCR}:${SOLO_AMD64_TAG}
-          else
-            echo "⚠️ 未找到 ${ORIG_AMD64_TAG}，从 ${BASE_TAG} 提取 amd64"
-            docker pull --platform=linux/amd64 ${REPO_DOCKERHUB}:${BASE_TAG}
-            docker tag ${REPO_DOCKERHUB}:${BASE_TAG} ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
-            docker push ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} ${REPO_GHCR}:${SOLO_AMD64_TAG}
-            docker push ${REPO_GHCR}:${SOLO_AMD64_TAG}
-          fi
+          # 更新 latest 为同一 multi-arch
+          docker manifest create ${{ env.REPO_DOCKERHUB }}:latest \
+            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            --amend ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+          docker manifest push ${{ env.REPO_DOCKERHUB }}:latest
 
-      - name: 生成并推送纯 arm64 的 “solo” 标签
+      - name: Create & push GHCR multi-arch manifest
         run: |
-          set -e
-          BASE_TAG="${TAG}"
-          ORIG_ARM64_TAG="${BASE_TAG}-arm64"
-          SOLO_ARM64_TAG="${BASE_TAG}-arm64-solo"
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker manifest create ${{ env.REPO_GHCR }}:$TAG \
+            --amend ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            --amend ${{ env.REPO_GHCR }}:$TAG-arm64
+          docker manifest push ${{ env.REPO_GHCR }}:$TAG
 
-          echo "====> 处理 arm64（检测并清洗）"
-          if docker manifest inspect ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} 2>/dev/null | grep -q '\"mediaType\": \"application/vnd.docker.distribution.manifest.list.v2+json\"'; then
-            echo "⚠️ 发现 ${ORIG_ARM64_TAG} 是 Manifest List，提取 arm64 层"
-            docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-            docker push ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG} ${REPO_GHCR}:${SOLO_ARM64_TAG}
-            docker push ${REPO_GHCR}:${SOLO_ARM64_TAG}
-          elif docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} 2>/dev/null; then
-            echo "✅ 远端存在纯 arm64 镜像 ${ORIG_ARM64_TAG}，打成 solo"
-            docker tag ${REPO_DOCKERHUB}:${ORIG_ARM64_TAG} ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-            docker push ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG} ${REPO_GHCR}:${SOLO_ARM64_TAG}
-            docker push ${REPO_GHCR}:${SOLO_ARM64_TAG}
-          else
-            echo "⚠️ 未找到 ${ORIG_ARM64_TAG}，从 ${BASE_TAG} 提取 arm64"
-            docker pull --platform=linux/arm64 ${REPO_DOCKERHUB}:${BASE_TAG}
-            docker tag ${REPO_DOCKERHUB}:${BASE_TAG} ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-            docker push ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-            docker tag ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG} ${REPO_GHCR}:${SOLO_ARM64_TAG}
-            docker push ${REPO_GHCR}:${SOLO_ARM64_TAG}
-          fi
-
-      #####################################################################
-      # 步骤 2：用 “solo” 标签生成新的多架构 manifest
-      #####################################################################
-
-      - name: 在 DockerHub 上创建并推送 multi-arch Manifest `${{ env.TAG }}`
-        run: |
-          set -e
-          BASE_TAG="${TAG}"
-          SOLO_AMD64_TAG="${BASE_TAG}-amd64-solo"
-          SOLO_ARM64_TAG="${BASE_TAG}-arm64-solo"
-
-          echo "====> 在 DockerHub 上创建 multi-arch manifest: ${BASE_TAG}"
-          docker manifest create ${REPO_DOCKERHUB}:${BASE_TAG} \
-            --amend ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} \
-            --amend ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-
-          echo "====> 推送 DockerHub 上的 manifest:${BASE_TAG}"
-          docker manifest push ${REPO_DOCKERHUB}:${BASE_TAG}
-
-          echo "====> 为 DockerHub 上的 latest 创建 multi-arch manifest"
-          docker manifest create ${REPO_DOCKERHUB}:latest \
-            --amend ${REPO_DOCKERHUB}:${SOLO_AMD64_TAG} \
-            --amend ${REPO_DOCKERHUB}:${SOLO_ARM64_TAG}
-          docker manifest push ${REPO_DOCKERHUB}:latest
-
-      - name: 在 GHCR 上创建并推送 multi-arch Manifest `${{ env.TAG }}`
-        run: |
-          set -e
-          BASE_TAG="${TAG}"
-          SOLO_AMD64_TAG="${BASE_TAG}-amd64-solo"
-          SOLO_ARM64_TAG="${BASE_TAG}-arm64-solo"
-
-          echo "====> 在 GHCR 上创建 multi-arch manifest: ${BASE_TAG}"
-          docker manifest create ${REPO_GHCR}:${BASE_TAG} \
-            --amend ${REPO_GHCR}:${SOLO_AMD64_TAG} \
-            --amend ${REPO_GHCR}:${SOLO_ARM64_TAG}
-
-          echo "====> 推送 GHCR 上的 manifest:${BASE_TAG}"
-          docker manifest push ${REPO_GHCR}:${BASE_TAG}
-
-          echo "====> 为 GHCR 上的 latest 创建 multi-arch manifest"
-          docker manifest create ${REPO_GHCR}:latest \
-            --amend ${REPO_GHCR}:${SOLO_AMD64_TAG} \
-            --amend ${REPO_GHCR}:${SOLO_ARM64_TAG}
-          docker manifest push ${REPO_GHCR}:latest
+          # 更新 latest 为同一 multi-arch
+          docker manifest create ${{ env.REPO_GHCR }}:latest \
+            --amend ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            --amend ${{ env.REPO_GHCR }}:$TAG-arm64
+          docker manifest push ${{ env.REPO_GHCR }}:latest
