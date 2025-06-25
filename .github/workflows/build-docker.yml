@@ -47,7 +47,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+  
       - name: Check if multi-arch manifest exists on DockerHub
         id: check
         run: |
@@ -57,6 +57,9 @@ jobs:
           else
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
+  
+      - name: Debug skip_build output
+        run: echo "SKIP_BUILD=${{ steps.check.outputs.skip_build }}"
 
   # 2a. 构建 amd64 单架构镜像
   build-amd64:
