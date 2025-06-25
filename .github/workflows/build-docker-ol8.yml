@@ -57,6 +57,8 @@ jobs:
           else
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
+      - name: Debug skip_build output
+        run: echo "SKIP_BUILD=${{ steps.check.outputs.skip_build }}"
 
   # 2a) 构建 amd64-ol8 单架构
   build-amd64-ol8:
