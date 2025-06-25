@@ -70,7 +70,7 @@ jobs:
 
       - name: Debug inspect
         run: |
-          docker buildx imagetools inspect ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }} || echo "inspect failed"
+          docker buildx imagetools inspect ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64 || echo "inspect failed"
   
       - name: Debug skip_build output
         run: echo "SKIP_BUILD=${{ steps.check.outputs.skip_build }}"
