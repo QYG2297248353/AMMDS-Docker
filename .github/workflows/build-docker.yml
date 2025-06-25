@@ -125,7 +125,7 @@ jobs:
 
   # 3. 构建完成后生成并推送 multi-arch Manifest
   create-manifest:
-    needs: [build-amd64, build-arm64]
+    needs: [set-tag, build-amd64, build-arm64]
     if: needs.set-tag.outputs.tag != ''
     runs-on: ubuntu-latest
     steps:
