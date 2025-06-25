@@ -167,8 +167,8 @@ jobs:
 
   # 3. 构建完成后生成并推送 multi-arch Manifest
   create-manifest:
-    needs: [set-tag, check-images, build-amd64, build-arm64]
-    if: needs.set-tag.outputs.tag != ''
+    needs: [set-tag, check-images]
+    if: needs.check-images.outputs.skip_build == 'true' || needs.check-images.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Login DockerHub
