@@ -35,9 +35,33 @@ jobs:
             echo "tag=$branch" >> $GITHUB_OUTPUT
           fi
 
+  # 1.5) 检查 ol8 multi-arch manifest 是否已存在，决定是否跳过构建
+  check-images-ol8:
+    needs: set-tag
+    runs-on: ubuntu-latest
+    outputs:
+      skip_build: ${{ steps.check.outputs.skip_build }}
+    steps:
+      - name: Login DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Inspect existing OL8 manifest
+        id: check
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
+          if docker manifest inspect ${{ env.REPO_DOCKERHUB }}:$TAG > /dev/null 2>&1; then
+            echo "skip_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip_build=false" >> $GITHUB_OUTPUT
+          fi
+
   # 2a) 构建 amd64-ol8 单架构
   build-amd64-ol8:
-    needs: set-tag
+    needs: [set-tag, check-images-ol8]
+    if: ${{ needs.check-images-ol8.outputs.skip_build == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -74,7 +98,8 @@ jobs:
 
   # 2b) 构建 arm64-ol8 单架构
   build-arm64-ol8:
-    needs: set-tag
+    needs: [set-tag, check-images-ol8]
+    if: ${{ needs.check-images-ol8.outputs.skip_build == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -111,8 +136,8 @@ jobs:
 
   # 3) 合并成 ol8 双架构 manifest（不 touch latest）
   create-manifest-ol8:
-    needs: [build-amd64-ol8, build-arm64-ol8]
-    if: needs.set-tag.outputs.tag != ''
+    needs: [set-tag, check-images-ol8, build-amd64-ol8, build-arm64-ol8]
+    if: ${{ needs.set-tag.outputs.tag != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
