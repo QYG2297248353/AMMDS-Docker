@@ -277,7 +277,6 @@ height="50"
 style="border-radius:50%;margin:5px;"
 alt="2126263229">
 </a>
-
 <a href="mailto:413146789@qq.com" 
 title="413146789"
 target="_blank"
@@ -288,7 +287,6 @@ height="50"
 style="border-radius:50%;margin:5px;"
 alt="413146789">
 </a>
-
 </div>
 
 ---
