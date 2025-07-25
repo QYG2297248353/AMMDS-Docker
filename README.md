@@ -158,6 +158,16 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 <!-- 头像展示区 -->
 <div align="center">
+<a href="https://afdian.com/u/c3efcbda113a11efaae85254001e7c00" 
+title="haolanne"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-blue.png?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="haolanne">
+</a>
 <a href="https://afdian.com/u/93607184123011f08fd552540025c377" 
 title="qh18611"
 target="_blank"
@@ -204,6 +214,20 @@ alt="爱发电用户_AFGN">
 <summary>🎉 感谢这些可爱的赞助者（点击展开）</summary>
 <br>
 
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.com/u/c3efcbda113a11efaae85254001e7c00" 
+style="text-decoration: none;">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-blue.png?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="haolanne">
+<span style="color: #0366d6;">haolanne</span>
+</a>
+<span style="color: #586069;">
+(0 次支持)
+</span>
+</div>
 <div style="margin-bottom: 8px;">
 <a href="https://afdian.com/u/93607184123011f08fd552540025c377" 
 style="text-decoration: none;">
