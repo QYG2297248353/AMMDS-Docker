@@ -29,7 +29,6 @@ body:
         1. 发生的功能模块
         2. 异常的截图
         3. 详细的问题的描述
-        ...
     validations:
       required: true
   - type: textarea
@@ -38,8 +37,7 @@ body:
       label: 日志记录
       description: "(可选)粘贴运行日志"
       placeholder: |
-        日志文件内容
-        ...
+        直接粘贴日志文件内容即可
       render: bash
     validations:
       required: false
