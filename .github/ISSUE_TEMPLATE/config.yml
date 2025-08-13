@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/QYG2297248353/AMMDS-Docker/discussions
+    about: 提出有关项目安装、部署、使用等方面的问题。
