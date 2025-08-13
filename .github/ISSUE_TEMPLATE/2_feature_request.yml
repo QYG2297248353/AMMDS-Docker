@@ -21,7 +21,7 @@ body:
         - label: "我认为有可实施的可能性"
           required: true
   - type: textarea
-    id: repro-bug
+    id: feature-request
     attributes:
       label: "需求描述"
       description: "详细描述您的新需求"
