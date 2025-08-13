@@ -9,7 +9,7 @@ body:
       value: |
         感谢您对AMMDS的支持！
   - type: textarea
-    id: feature-request
+    id: question
     attributes:
       label: "问题咨询"
       description: "请描述您的问题"
