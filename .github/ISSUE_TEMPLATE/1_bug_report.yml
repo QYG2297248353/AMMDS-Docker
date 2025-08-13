@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-      感谢您花费时间反馈问题，使用更加详细问题描述，我们便可更快的定位解决问题。感谢您对AMMDS的支持！
+        感谢您花费时间反馈问题，使用更加详细问题描述，我们便可更快的定位解决问题。感谢您对AMMDS的支持！
   - type: checkboxes
     id: cat-preferences
     attributes:
