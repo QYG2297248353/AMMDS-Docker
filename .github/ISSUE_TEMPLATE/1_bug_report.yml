@@ -30,7 +30,6 @@ body:
         2. 异常的截图
         3. 详细的问题的描述
         ...
-      value: ""
     validations:
       required: true
   - type: textarea
@@ -41,7 +40,6 @@ body:
       placeholder: |
         日志文件内容
         ...
-      value: ""
       render: bash
     validations:
       required: false
