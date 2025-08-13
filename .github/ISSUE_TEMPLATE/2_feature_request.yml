@@ -1,0 +1,32 @@
+name: 'Feature 功能请求'
+description: '新需求、新功能请求'
+title: '[Feature] '
+assignees: QYG2297248353
+labels: Feature - 新功能
+body:
+  - type: markdown
+    attributes:
+      value: |
+        详细的描述新功能点的具体操作，方便开发人员对新想法的Get。感谢您对AMMDS的支持！
+  - type: checkboxes
+    id: cat-preferences
+    attributes:
+      label: "提交确认"
+      description: "反馈需求前请先确认相关操作是否完成"
+      options:
+        - label: "我已阅读 官方文档 的常见问题"
+          required: true
+        - label: "我已检索 Issues 并且未发现相似需求"
+          required: true
+        - label: "我认为有可实施的可能性"
+          required: true
+  - type: textarea
+    id: repro-bug
+    attributes:
+      label: "需求描述"
+      description: "详细描述您的新需求"
+      placeholder: |
+        1. 功能模块描述
+        2. 自制简易草图
+    validations:
+      required: true
