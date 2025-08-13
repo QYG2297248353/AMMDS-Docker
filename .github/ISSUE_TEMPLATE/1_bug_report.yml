@@ -21,7 +21,7 @@ body:
         - label: "我已确认 安装版本 为最新版本"
           required: true
   - type: textarea
-    id: repro
+    id: repro-bug
     attributes:
       label: "问题描述"
       description: "详细描述您遇到的问题"
@@ -33,7 +33,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: repro
+    id: repro-logs
     attributes:
       label: 日志记录
       description: "(可选)粘贴运行日志"
