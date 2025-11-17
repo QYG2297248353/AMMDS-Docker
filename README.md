@@ -152,19 +152,31 @@ AMMDS（Adult Movie MetaData Scraper）是一款私人专属数据管理平台�
 
 **🙏 感谢每一位捐赠者的支持！你们是开源前进的动力。**
 
+⚡爱发电赞助
+
 <!-- AFDIAN-ACTION:START -->
 
 <!-- 头像展示区 -->
 <div align="center">
-<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
-title="嗨咯"
+<a href="https://afdian.com/u/c3efcbda113a11efaae85254001e7c00" 
+title="haolanne"
 target="_blank"
 rel="noopener noreferrer">
-<img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/120/h/120" 
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-blue.png?imageView2/1/w/120/h/120" 
 width="50" 
 height="50" 
 style="border-radius:50%;margin:5px;"
-alt="嗨咯">
+alt="haolanne">
+</a>
+<a href="https://afdian.com/u/93607184123011f08fd552540025c377" 
+title="qh18611"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-blue.png?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="qh18611">
 </a>
 <a href="https://afdian.com/u/09e885e22e3a11f0af0352540025c377" 
 title="爱发电用户_09e88"
@@ -175,6 +187,16 @@ width="50"
 height="50" 
 style="border-radius:50%;margin:5px;"
 alt="爱发电用户_09e88">
+</a>
+<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
+title="嗨咯"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="嗨咯">
 </a>
 <a href="https://afdian.com/u/601d91c22ce711f09fd052540025c377" 
 title="爱发电用户_AFGN"
@@ -193,18 +215,32 @@ alt="爱发电用户_AFGN">
 <br>
 
 <div style="margin-bottom: 8px;">
-<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
+<a href="https://afdian.com/u/c3efcbda113a11efaae85254001e7c00" 
 style="text-decoration: none;">
-<img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/40/h/40" 
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-blue.png?imageView2/1/w/40/h/40" 
 width="20" 
 height="20" 
 style="vertical-align: middle; border-radius: 50%;"
-alt="嗨咯">
-<span style="color: #0366d6;">嗨咯</span>
+alt="haolanne">
+<span style="color: #0366d6;">haolanne</span>
 </a>
 <span style="color: #586069;">
-(0 次支持)
+(1 次支持)
 </span>
+</div>
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.com/u/93607184123011f08fd552540025c377" 
+style="text-decoration: none;">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-blue.png?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="qh18611">
+<span style="color: #0366d6;">qh18611</span>
+</a>
+<span style="color: #586069;">
+(1 次支持)
+📝 qh18611</span>
 </div>
 <div style="margin-bottom: 8px;">
 <a href="https://afdian.com/u/09e885e22e3a11f0af0352540025c377" 
@@ -215,6 +251,20 @@ height="20"
 style="vertical-align: middle; border-radius: 50%;"
 alt="爱发电用户_09e88">
 <span style="color: #0366d6;">爱发电用户_09e88</span>
+</a>
+<span style="color: #586069;">
+(1 次支持)
+</span>
+</div>
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
+style="text-decoration: none;">
+<img src="https://pic1.afdiancdn.com/user/user_upload_osl/a6116a37a0dc19e78b20ead2d340cd7c_w132_h132_s2.jpeg?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="嗨咯">
+<span style="color: #0366d6;">嗨咯</span>
 </a>
 <span style="color: #586069;">
 (0 次支持)
@@ -237,6 +287,41 @@ alt="爱发电用户_AFGN">
 </details>
 
 <!-- AFDIAN-ACTION:END -->
+
+⚡商店赞助
+
+<div align="center">
+<a href="mailto:2126263229@qq.com" 
+title="2126263229"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://q.qlogo.cn/g?b=qq&nk=2126263229&s=640" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="2126263229">
+</a>
+<a href="mailto:413146789@qq.com" 
+title="413146789"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://q.qlogo.cn/g?b=qq&nk=413146789&s=640" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="413146789">
+</a>
+<a href="mailto:825824004@qq.com" 
+title="825824004"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://q.qlogo.cn/g?b=qq&nk=825824004&s=640" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="825824004">
+</a>
+</div>
 
 ---
 

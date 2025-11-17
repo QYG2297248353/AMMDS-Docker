@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/QYG2297248353/AMMDS-Docker/discussions
+    about: 提出有关项目安装、部署、使用等方面的问题。
+  - name: 博客论坛
+    url: https://blog.lifebus.top/
+    about: 总能找到你想要的
+  - name: 萌森工作室
+    url: https://www.tianyancha.com/company/6145984989
+    about: 新疆萌森软件开发工作室提供技术支持

@@ -1,0 +1,19 @@
+name: 'Question 问题咨询'
+description: '无法确认的问题类型，使用咨询'
+title: '[Question] '
+assignees: QYG2297248353
+labels: Question - 问题咨询
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您对AMMDS的支持！
+  - type: textarea
+    id: question
+    attributes:
+      label: "问题咨询"
+      description: "请描述您的问题"
+      placeholder: |
+        请描述您的问题
+    validations:
+      required: true

@@ -1,10 +1,11 @@
-name: Build & Publish Docker Images
+name: Build & Publish OL8 Docker Images
 
 on:
   push:
-    branches: [ release ]
+    branches:
+      - release
   release:
-    types: [ created ]
+    types: [created]
   workflow_dispatch:
     inputs:
       ref_name:
@@ -35,7 +36,7 @@ jobs:
           fi
 
   # 1.5 检查两个架构镜像是否都已存在
-  check-images:
+  check-images-ol8:
     needs: set-tag
     runs-on: ubuntu-latest
     outputs:
@@ -51,8 +52,8 @@ jobs:
         id: check
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          AMD="${{ env.REPO_DOCKERHUB }}:$TAG-amd64"
-          ARM="${{ env.REPO_DOCKERHUB }}:$TAG-arm64"
+          AMD="${{ env.REPO_DOCKERHUB }}:$TAG-ol8-amd64"
+          ARM="${{ env.REPO_DOCKERHUB }}:$TAG-ol8-arm64"
 
           AMD_OK=$(docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 && echo yes || echo no)
           ARM_OK=$(docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 && echo yes || echo no)
@@ -68,9 +69,9 @@ jobs:
         run: echo "skip_build=${{ steps.check.outputs.skip_build }}"
 
   # 2a. 并行：构建 amd64（若 skip_build=false）
-  build-amd64:
-    needs: [ set-tag, check-images ]
-    if: needs.check-images.outputs.skip_build == 'false'
+  build-amd64-ol8:
+    needs: [ set-tag, check-images-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -89,21 +90,21 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
-      - name: Build & push amd64
+      - name: Build & push amd64-ol8
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/Dockerfile-OL8
           platforms: linux/amd64
-          push: true
+          push:      true
           tags: |
-            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64
-            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-ol8-amd64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-ol8-amd64
 
   # 2b. 并行：构建 arm64（若 skip_build=false）
-  build-arm64:
-    needs: [ set-tag, check-images ]
-    if: needs.check-images.outputs.skip_build == 'false'
+  build-arm64-ol8:
+    needs: [ set-tag, check-images-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -122,21 +123,21 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
-      - name: Build & push arm64
+      - name: Build & push arm64-ol8
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/Dockerfile-OL8
           platforms: linux/arm64
-          push: true
+          push:      true
           tags: |
-            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64
-            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-ol8-arm64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-ol8-arm64
 
   # 3a. 如果跳过构建（skip_build=true），立刻合并 manifest
   manifest-skip:
-    needs: [ set-tag, check-images ]
-    if: needs.check-images.outputs.skip_build == 'true'
+    needs: [ set-tag, check-images-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -152,28 +153,23 @@ jobs:
 
       - name: Create & push DockerHub manifest
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
           docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
           docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
+
 
   # 3b. 如果没跳过（skip_build=false），等两架构构建完成后再合并
   manifest-after-build:
-    needs: [ set-tag, check-images, build-amd64, build-arm64 ]
-    if: needs.check-images.outputs.skip_build == 'false'
+    needs: [ set-tag, check-images-ol8, build-amd64-ol8, build-arm64-ol8 ]
+    if: needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -189,20 +185,14 @@ jobs:
 
       - name: Create & push DockerHub manifest
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
           docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
+          TAG=${{ needs.set-tag.outputs.tag }}-ol8
           docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64

@@ -1,0 +1,43 @@
+name: 'Bug 错误报告'
+description: '功能异常或出错的情况'
+title: '[Bug] '
+assignees: QYG2297248353
+labels: Bug - 程序错误
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您花费时间反馈问题，使用更加详细问题描述，我们便可更快的定位解决问题。感谢您对AMMDS的支持！
+  - type: checkboxes
+    id: cat-preferences
+    attributes:
+      label: "提交确认"
+      description: "反馈问题前请先确认相关操作是否完成"
+      options:
+        - label: "我已阅读 官方文档 的常见问题"
+          required: true
+        - label: "我已检索 Issues 并且未发现相似问题"
+          required: true
+        - label: "我已确认 安装版本 为最新版本"
+          required: true
+  - type: textarea
+    id: repro-bug
+    attributes:
+      label: "问题描述"
+      description: "详细描述您遇到的问题"
+      placeholder: |
+        1. 发生的功能模块
+        2. 异常的截图
+        3. 详细的问题的描述
+    validations:
+      required: true
+  - type: textarea
+    id: repro-logs
+    attributes:
+      label: 日志记录
+      description: "(可选)粘贴运行日志"
+      placeholder: |
+        直接粘贴日志文件内容即可
+      render: bash
+    validations:
+      required: false
