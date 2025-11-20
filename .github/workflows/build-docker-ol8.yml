@@ -73,7 +73,7 @@ jobs:
   # 2a. 并行：构建 amd64（若 skip_build=false）
   build-amd64-ol8:
     needs: [ set-tag, check-images-ol8 ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'false'
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -106,7 +106,7 @@ jobs:
   # 2b. 并行：构建 arm64（若 skip_build=false）
   build-arm64-ol8:
     needs: [ set-tag, check-images-ol8 ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'false'
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -139,7 +139,7 @@ jobs:
   # 3a. 如果跳过构建（skip_build=true），立刻合并 manifest
   manifest-skip:
     needs: [ set-tag, check-images-ol8 ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'true'
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images-ol8.outputs.skip_build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -171,7 +171,7 @@ jobs:
   # 3b. 如果没跳过（skip_build=false），等两架构构建完成后再合并
   manifest-after-build:
     needs: [ set-tag, check-images-ol8, build-amd64-ol8, build-arm64-ol8 ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'false'
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images-ol8.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
