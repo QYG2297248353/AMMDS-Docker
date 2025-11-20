@@ -22,6 +22,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: 提取当前发布的 Tag
         id: get_tag
         run: |
@@ -53,3 +56,4 @@ jobs:
             echo "上传：$file"
             gh release upload "${tag_name}" "$file" --clobber
           done
+
