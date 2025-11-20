@@ -208,3 +208,54 @@ jobs:
           docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
+  # 4. 导出构建产物
+  export-artifacts:
+    needs: manifest-after-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+          registry: ghcr.io
+  
+      - name: Pull final amd64 image
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
+  
+      - name: Pull final arm64 image
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker pull ${{ env.REPO_GHCR }}:$TAG-arm64
+  
+      - name: Export backend and frontend from amd64
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          mkdir -p exports/amd64/backend exports/amd64/frontend
+          CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-amd64)
+          docker cp $CID:/ammds/ammds exports/amd64/backend/
+          docker cp $CID:/usr/share/nginx/html exports/amd64/frontend/
+          docker rm $CID
+  
+      - name: Export backend and frontend from arm64
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          mkdir -p exports/arm64/backend exports/arm64/frontend
+          CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-arm64)
+          docker cp $CID:/ammds/ammds exports/arm64/backend/
+          docker cp $CID:/usr/share/nginx/html exports/arm64/frontend/
+          docker rm $CID
+  
+      - name: Compress artifacts
+        run: |
+          tar -czf exports/amd64-backend.tar.gz -C exports/amd64/backend .
+          tar -czf exports/amd64-frontend.tar.gz -C exports/amd64/frontend .
+          tar -czf exports/arm64-backend.tar.gz -C exports/arm64/backend .
+          tar -czf exports/arm64-frontend.tar.gz -C exports/arm64/frontend .
+  
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ammds-artifacts
+          path: exports/*.tar.gz
