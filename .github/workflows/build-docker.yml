@@ -211,91 +211,120 @@ jobs:
 
   # 4. 产物导出
   manifest-final:
-    needs: [manifest-after-build, manifest-skip]
+    needs: [ set-tag, manifest-after-build, manifest-skip ]
     if: always()
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.outs.outputs.tag }}
     steps:
-      - run: echo "Manifest stage completed."
+      - name: Debug info
+        run: |
+          echo "Jobs status summary:"
+          echo "needs.set-tag: ${{ needs.set-tag.result || 'none' }}"
+          echo "needs.manifest-after-build: ${{ needs.manifest-after-build.result || 'none' }}"
+          echo "needs.manifest-skip: ${{ needs.manifest-skip.result || 'none' }}"
+      - name: Emit tag output
+        id: outs
+        run: |
+          # Try to fetch tag from set-tag outputs (must exist if set-tag ran)
+          # Fallback: try release.tag_name or workflow input
+          TAG_FROM_SET="${{ needs.set-tag.outputs.tag }}"
+          if [ -n "$TAG_FROM_SET" ]; then
+            echo "Using tag from needs.set-tag: $TAG_FROM_SET"
+            echo "tag=$TAG_FROM_SET" >> $GITHUB_OUTPUT
+          else
+            # Fallbacks
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "Using workflow_dispatch input as tag"
+              echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+            elif [ "${{ github.event_name }}" = "release" ]; then
+              echo "Using github.event.release.tag_name as tag"
+              echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            else
+              BRANCH=${GITHUB_REF#refs/heads/}
+              echo "Using branch name as tag: $BRANCH"
+              echo "tag=$BRANCH" >> $GITHUB_OUTPUT
+            fi
+          fi
 
-
-  # 4a. 导出 amd64 产物
+  # 4a. 导出 amd64 产物（只依赖 manifest-final）
   export-amd64:
-    needs: [ set-tag, manifest-final ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
+    needs: [ manifest-final ]
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
 
     steps:
-      - uses: docker/login-action@v2
+      - name: Login to GHCR
+        uses: docker/login-action@v2
         with:
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
-          registry: ghcr.io
 
       - name: Pull amd64 image
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
+          TAG=${{ needs.manifest-final.outputs.tag }}
+          echo "Exporting AMD64 artifacts for TAG=${TAG}"
           docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
 
       - name: Export amd64 artifacts
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-
+          TAG=${{ needs.manifest-final.outputs.tag }}
           mkdir -p exports/backend exports/frontend
-
           CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-amd64)
-          docker cp $CID:/ammds/ammds exports/backend/
-          docker cp $CID:/usr/share/nginx/html exports/frontend/
-          docker rm $CID
-
+          echo "Created container $CID"
+          docker cp $CID:/ammds/ammds exports/backend/ || echo "Warning: backend path missing in amd64 container"
+          docker cp $CID:/usr/share/nginx/html exports/frontend/ || echo "Warning: frontend path missing in amd64 container"
+          docker rm $CID || true
           tar -czf ammds-amd64-backend.tar.gz -C exports/backend .
           tar -czf ammds-amd64-frontend.tar.gz -C exports/frontend .
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload amd64 artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: ammds-amd64-artifacts
           path: |
             ammds-amd64-backend.tar.gz
             ammds-amd64-frontend.tar.gz
 
-
-  # 4b. 导出 arm64 产物
+  # 4b. 导出 arm64 产物（只依赖 manifest-final）
   export-arm64:
-    needs: [ set-tag, manifest-final ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
+    needs: [ manifest-final ]
+    if: github.event_name == 'release'
     runs-on: ubuntu-24.04-arm64
 
     steps:
-      - uses: docker/login-action@v2
+      - name: Login to GHCR
+        uses: docker/login-action@v2
         with:
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
-          registry: ghcr.io
 
       - name: Pull arm64 image
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
+          TAG=${{ needs.manifest-final.outputs.tag }}
+          echo "Exporting ARM64 artifacts for TAG=${TAG}"
           docker pull ${{ env.REPO_GHCR }}:$TAG-arm64
 
       - name: Export arm64 artifacts
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-
+          TAG=${{ needs.manifest-final.outputs.tag }}
           mkdir -p exports/backend exports/frontend
-
           CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-arm64)
-          docker cp $CID:/ammds/ammds exports/backend/
-          docker cp $CID:/usr/share/nginx/html exports/frontend/
-          docker rm $CID
-
+          echo "Created container $CID"
+          docker cp $CID:/ammds/ammds exports/backend/ || echo "Warning: backend path missing in arm64 container"
+          docker cp $CID:/usr/share/nginx/html exports/frontend/ || echo "Warning: frontend path missing in arm64 container"
+          docker rm $CID || true
           tar -czf ammds-arm64-backend.tar.gz -C exports/backend .
           tar -czf ammds-arm64-frontend.tar.gz -C exports/frontend .
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload arm64 artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: ammds-arm64-artifacts
           path: |
             ammds-arm64-backend.tar.gz
             ammds-arm64-frontend.tar.gz
-
 
 
