@@ -210,7 +210,8 @@ jobs:
             ${{ env.REPO_GHCR }}:$TAG-arm64
   # 4. 导出构建产物
   export-artifacts:
-    needs: manifest-after-build
+    needs: [ set-tag, manifest-after-build, manifest-skip ]
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -222,11 +223,13 @@ jobs:
       - name: Pull final amd64 image
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
+          echo "TAG=$TAG"
           docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
   
       - name: Pull final arm64 image
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
+          echo "TAG=$TAG"
           docker pull ${{ env.REPO_GHCR }}:$TAG-arm64
   
       - name: Export backend and frontend from amd64
@@ -259,3 +262,4 @@ jobs:
         with:
           name: ammds-artifacts
           path: exports/*.tar.gz
+
