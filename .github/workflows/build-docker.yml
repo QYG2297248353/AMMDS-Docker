@@ -236,11 +236,16 @@ jobs:
           docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
       - name: Extract artifacts
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
           mkdir -p ammds-amd64-backend ammds-amd64-frontend
+          EXCLUDE_FILES=("poweredby.png" "system_noindex_logo.png")
+          EXCLUDE_ARGS=""
+          for f in "${EXCLUDE_FILES[@]}"; do
+              EXCLUDE_ARGS+=" --exclude='./$f'"
+          done
           CID=$(docker create --platform linux/amd64 ${{ env.REPO_GHCR }}:$TAG-amd64)
           docker cp $CID:/ammds/ammds ammds-amd64-backend/
-          docker cp $CID:/usr/share/nginx/html ammds-amd64-frontend/ || true
+          docker start $CID
+          docker exec $CID tar -C /usr/share/nginx/html $EXCLUDE_ARGS -cf - . | tar -C ./ammds-amd64-frontend -xf -
           docker rm $CID
           tar -czf ammds-amd64-backend.tar.gz -C ammds-amd64-backend .
           tar -czf ammds-amd64-frontend.tar.gz -C ammds-amd64-frontend .
@@ -270,11 +275,16 @@ jobs:
           docker pull --platform linux/arm64 ${{ env.REPO_GHCR }}:$TAG-arm64
       - name: Extract artifacts
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
           mkdir -p ammds-arm64-backend ammds-arm64-frontend
+          EXCLUDE_FILES=("poweredby.png" "system_noindex_logo.png")
+          EXCLUDE_ARGS=""
+          for f in "${EXCLUDE_FILES[@]}"; do
+              EXCLUDE_ARGS+=" --exclude='./$f'"
+          done
           CID=$(docker create --platform linux/arm64 ${{ env.REPO_GHCR }}:$TAG-arm64)
           docker cp $CID:/ammds/ammds ammds-arm64-backend/
-          docker cp $CID:/usr/share/nginx/html ammds-arm64-frontend/ || true
+          docker start $CID
+          docker exec $CID tar -C /usr/share/nginx/html $EXCLUDE_ARGS -cf - . | tar -C ./ammds-arm64-frontend -xf -
           docker rm $CID
           tar -czf ammds-arm64-backend.tar.gz -C ammds-arm64-backend .
           tar -czf ammds-arm64-frontend.tar.gz -C ammds-arm64-frontend .
