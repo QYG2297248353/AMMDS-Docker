@@ -243,27 +243,24 @@ jobs:
           echo "Using TAG=$TAG, IMAGE=$IMAGE"
           mkdir -p ammds-amd64-backend ammds-amd64-frontend
   
-          # 排除文件
           EXCLUDE_FILES=("poweredby.png" "system_noindex_logo.png")
           EXCLUDE_ARGS=()
           for f in "${EXCLUDE_FILES[@]}"; do
               EXCLUDE_ARGS+=(--exclude="./$f")
           done
   
-          # 创建容器
           CID=$(docker create --platform linux/amd64 "$IMAGE")
           echo "Container ID: $CID"
   
           # 拷贝后端
           docker cp "$CID":/ammds/ammds ./ammds-amd64-backend/
   
-          # 启动容器
+          # 导出前端
           docker start "$CID"
-  
-          # 导出前端，安全传递排除参数
           docker exec "$CID" tar -C /usr/share/nginx/html "${EXCLUDE_ARGS[@]}" -cf - . | tar -C ./ammds-amd64-frontend -xf -
   
-          # 清理容器
+          # 停止并删除容器
+          docker stop "$CID"
           docker rm "$CID"
   
           # 打包产物
@@ -315,6 +312,8 @@ jobs:
   
           docker start "$CID"
           docker exec "$CID" tar -C /usr/share/nginx/html "${EXCLUDE_ARGS[@]}" -cf - . | tar -C ./ammds-arm64-frontend -xf -
+  
+          docker stop "$CID"
           docker rm "$CID"
   
           tar -czf ammds-arm64-backend.tar.gz -C ammds-arm64-backend .
