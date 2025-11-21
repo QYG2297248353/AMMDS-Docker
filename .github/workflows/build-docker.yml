@@ -1,228 +1,97 @@
-name: Build & Publish Docker Images
+name: Build & Publish AMMDS
 
 on:
-  push:
-    branches: [ release ]
   release:
-    types: [ created ]
-  workflow_dispatch:
-    inputs:
-      ref_name:
-        description: '镜像标签（如 v1.6.10）'
-        required: true
-        default: 'v1.0.0'
+    types: [created]
 
 env:
-  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
-  REPO_GHCR:      ghcr.io/qyg2297248353/ammds
+  REPO_GHCR: ghcr.io/qyg2297248353/ammds
 
 jobs:
-  # 1. set-tag: 负责决定 tag 和整条 workflow 是否运行
+
+  # 1. 生成 TAG
   set-tag:
+    if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.calc_tag.outputs.tag }}
-      run: ${{ steps.check.outputs.run }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - id: calc_tag
+      - id: tag
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-          else
-            BRANCH=${GITHUB_REF#refs/heads/}
-            echo "tag=$BRANCH" >> $GITHUB_OUTPUT
-          fi
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using TAG=$TAG"
 
-      - id: check
-        run: |
-          if [ "${{ github.event_name }}" = "release" ] && \
-             [ "${{ github.event.release.target_commitish }}" = "master" ]; then
-             echo "run=true" >> $GITHUB_OUTPUT
-          else
-             echo "run=false" >> $GITHUB_OUTPUT
-          fi
-
-
-  # 1.5 检查是否已有两个架构镜像
+  # 2. 检查镜像是否存在
   check-images:
     needs: set-tag
-    if: needs.set-tag.outputs.run == 'true'
     runs-on: ubuntu-latest
     outputs:
       skip_build: ${{ steps.check.outputs.skip_build }}
     steps:
-      - uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - id: check
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          AMD="${{ env.REPO_DOCKERHUB }}:$TAG-amd64"
-          ARM="${{ env.REPO_DOCKERHUB }}:$TAG-arm64"
 
-          AMD_OK=$(docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 && echo yes || echo no)
-          ARM_OK=$(docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 && echo yes || echo no)
+          AMD_OK=no
+          ARM_OK=no
 
-          echo "AMD_OK=$AMD_OK ARM_OK=$ARM_OK"
+          docker manifest inspect ${{ env.REPO_GHCR }}:$TAG-amd64 >/dev/null 2>&1 && AMD_OK=yes
+          docker manifest inspect ${{ env.REPO_GHCR }}:$TAG-arm64 >/dev/null 2>&1 && ARM_OK=yes
+
           if [[ "$AMD_OK" == "yes" && "$ARM_OK" == "yes" ]]; then
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
 
+          echo "skip_build=$(cat $GITHUB_OUTPUT)"
 
-  # 2a. build amd64
+  # 3a. 构建（当 skip_build=false）
   build-amd64:
-    needs: [set-tag, check-images]
-    if: needs.set-tag.outputs.run == 'true' && needs.check-images.outputs.skip_build == 'false'
+    needs: check-images
+    if: needs.check-images.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - run: |
-          git lfs install --skip-smudge
-          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
-          cd source && git lfs pull --exclude="*"
-      - uses: docker/setup-qemu-action@v2
-      - uses: docker/setup-buildx-action@v2
-      - uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
+      - run: echo "Building AMD64..."
 
-      - name: Build & push amd64
-        uses: docker/build-push-action@v4
-        with:
-          context: ./source
-          file: ./source/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64
-            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64
-
-
-  # 2b. build arm64
   build-arm64:
-    needs: [set-tag, check-images]
-    if: needs.set-tag.outputs.run == 'true' && needs.check-images.outputs.skip_build == 'false'
-    runs-on: ubuntu-latest
+    needs: check-images
+    if: needs.check-images.outputs.skip_build == 'false'
+    runs-on: ubuntu-24.04-arm64
     steps:
-      - uses: actions/checkout@v3
-      - run: |
-          git lfs install --skip-smudge
-          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
-          cd source && git lfs pull --exclude="*"
-      - uses: docker/setup-qemu-action@v2
-      - uses: docker/setup-buildx-action@v2
-      - uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
+      - run: echo "Building ARM64..."
 
-      - name: Build & push arm64
-        uses: docker/build-push-action@v4
-        with:
-          context: ./source
-          file: ./source/Dockerfile
-          platforms: linux/arm64
-          push: true
-          tags: |
-            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64
-            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64
-
-
-  # 3a. manifest when skip_build=true
-  manifest-skip:
-    needs: [set-tag, check-images]
-    if: needs.set-tag.outputs.run == 'true' && needs.check-images.outputs.skip_build == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
-
-      - uses: docker/setup-buildx-action@v2
-
-      - name: Create manifest
-        run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
-
-
-  # 3b. manifest after build
+  # 3b. 构建后的 manifest（只有构建时）
   manifest-after-build:
-    needs: [set-tag, check-images, build-amd64, build-arm64]
-    if: needs.set-tag.outputs.run == 'true' && needs.check-images.outputs.skip_build == 'false'
+    needs: [build-amd64, build-arm64]
+    if: always()  # 构建时必然执行
     runs-on: ubuntu-latest
     steps:
-      - uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: echo "Manifest after build"
 
-      - uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
+  # 3c. 跳过构建
+  manifest-skip:
+    needs: check-images
+    if: needs.check-images.outputs.skip_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Manifest skipped (images already exist)"
 
-      - uses: docker/setup-buildx-action@v2
-
-      - name: Create manifest
-        run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
-
-
-  # 4. merge route for export
+  # 4. 产物导出 
   manifest-final:
     needs: [manifest-after-build, manifest-skip]
-    if: needs.set-tag.outputs.run == 'true'
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Manifest stage completed."
+      - run: echo "Manifest finalized."
 
-
-  # 4a. export amd64 artifacts
+  # 5a. 导出 amd64 产物
   export-amd64:
     needs: [set-tag, manifest-final]
-    if: needs.set-tag.outputs.run == 'true'
+    if: always()
     runs-on: ubuntu-latest
+
     steps:
       - uses: docker/login-action@v2
         with:
@@ -230,7 +99,7 @@ jobs:
           password: ${{ secrets.GITHUBTOKEN }}
           registry: ghcr.io
 
-      - name: Pull amd64 image
+      - name: Pull amd64
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
@@ -256,12 +125,12 @@ jobs:
             ammds-amd64-backend.tar.gz
             ammds-amd64-frontend.tar.gz
 
-
-  # 4b. export arm64 artifacts
+  # 5b. 导出 arm64 产物
   export-arm64:
     needs: [set-tag, manifest-final]
-    if: needs.set-tag.outputs.run == 'true'
+    if: always()
     runs-on: ubuntu-24.04-arm64
+
     steps:
       - uses: docker/login-action@v2
         with:
@@ -269,7 +138,7 @@ jobs:
           password: ${{ secrets.GITHUBTOKEN }}
           registry: ghcr.io
 
-      - name: Pull arm64 image
+      - name: Pull arm64
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           docker pull ${{ env.REPO_GHCR }}:$TAG-arm64
