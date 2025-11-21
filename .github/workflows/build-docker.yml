@@ -208,9 +208,19 @@ jobs:
           docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
+
+  # 4. 产物导出
+  manifest-final:
+    needs: [manifest-after-build, manifest-skip]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Manifest stage completed."
+
+
   # 4a. 导出 amd64 产物
   export-amd64:
-    needs: [ set-tag, manifest-after-build, manifest-skip ]
+    needs: [ set-tag, manifest-final ]
     if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
 
@@ -250,7 +260,7 @@ jobs:
 
   # 4b. 导出 arm64 产物
   export-arm64:
-    needs: [ set-tag, manifest-after-build, manifest-skip ]
+    needs: [ set-tag, manifest-final ]
     if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
     runs-on: ubuntu-24.04-arm64
 
