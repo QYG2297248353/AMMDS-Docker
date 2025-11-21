@@ -1,43 +1,65 @@
-name: Build & Publish AMMDS
+name: Build & Publish Docker Images
 
 on:
+  push:
+    branches: [ release ]
   release:
-    types: [created]
+    types: [ created ]
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: '镜像标签（如 v1.6.10）'
+        required: true
+        default: 'v1.0.0'
 
 env:
-  REPO_GHCR: ghcr.io/qyg2297248353/ammds
+  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
+  REPO_GHCR:      ghcr.io/qyg2297248353/ammds
 
 jobs:
-
-  # 1. 生成 TAG
+  # ------------------------
+  # 1. 统一计算 tag
+  # ------------------------
   set-tag:
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.tag.outputs.tag }}
+      tag: ${{ steps.calc_tag.outputs.tag }}
     steps:
-      - id: tag
+      - id: calc_tag
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Using TAG=$TAG"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            BRANCH=${GITHUB_REF#refs/heads/}
+            echo "tag=$BRANCH" >> $GITHUB_OUTPUT
+          fi
 
-  # 2. 检查镜像是否存在
+  # ------------------------
+  # 1.5 检查镜像是否已存在
+  # ------------------------
   check-images:
     needs: set-tag
     runs-on: ubuntu-latest
     outputs:
       skip_build: ${{ steps.check.outputs.skip_build }}
     steps:
-      - id: check
+      - name: Login DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Check if arch images exist
+        id: check
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
+          AMD="${{ env.REPO_DOCKERHUB }}:$TAG-amd64"
+          ARM="${{ env.REPO_DOCKERHUB }}:$TAG-arm64"
 
-          AMD_OK=no
-          ARM_OK=no
-
-          docker manifest inspect ${{ env.REPO_GHCR }}:$TAG-amd64 >/dev/null 2>&1 && AMD_OK=yes
-          docker manifest inspect ${{ env.REPO_GHCR }}:$TAG-arm64 >/dev/null 2>&1 && ARM_OK=yes
+          AMD_OK=$(docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 && echo yes || echo no)
+          ARM_OK=$(docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 && echo yes || echo no)
 
           if [[ "$AMD_OK" == "yes" && "$ARM_OK" == "yes" ]]; then
             echo "skip_build=true" >> $GITHUB_OUTPUT
@@ -45,48 +67,159 @@ jobs:
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "skip_build=$(cat $GITHUB_OUTPUT)"
-
-  # 3a. 构建（当 skip_build=false）
+  # ------------------------
+  # 2a. 构建 amd64（若 skip_build=false）
+  # ------------------------
   build-amd64:
-    needs: check-images
+    needs: [ set-tag, check-images ]
     if: needs.check-images.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Building AMD64..."
+      - uses: actions/checkout@v3
+      - run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source && git lfs pull --exclude="*"
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+      - name: Build & push amd64
+        uses: docker/build-push-action@v4
+        with:
+          context: ./source
+          file: ./source/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64
 
+  # ------------------------
+  # 2b. 构建 arm64（若 skip_build=false）
+  # ------------------------
   build-arm64:
-    needs: check-images
+    needs: [ set-tag, check-images ]
     if: needs.check-images.outputs.skip_build == 'false'
-    runs-on: ubuntu-24.04-arm64
-    steps:
-      - run: echo "Building ARM64..."
-
-  # 3b. 构建后的 manifest（只有构建时）
-  manifest-after-build:
-    needs: [build-amd64, build-arm64]
-    if: always()  # 构建时必然执行
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Manifest after build"
+      - uses: actions/checkout@v3
+      - run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source && git lfs pull --exclude="*"
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+      - name: Build & push arm64
+        uses: docker/build-push-action@v4
+        with:
+          context: ./source
+          file: ./source/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64
 
-  # 3c. 跳过构建
+  # ------------------------
+  # 3a. 跳过构建时立即合并 manifest
+  # ------------------------
   manifest-skip:
-    needs: check-images
+    needs: [ set-tag, check-images ]
     if: needs.check-images.outputs.skip_build == 'true'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Manifest skipped (images already exist)"
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+      - uses: docker/setup-buildx-action@v2
 
-  # 4. 产物导出 
+      - name: Create & push DockerHub manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+
+      - name: Create & push GHCR manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
+            ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            ${{ env.REPO_GHCR }}:$TAG-arm64
+
+  # ------------------------
+  # 3b. 构建后合并 manifest
+  # ------------------------
+  manifest-after-build:
+    needs: [ set-tag, check-images, build-amd64, build-arm64 ]
+    if: needs.check-images.outputs.skip_build == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+      - uses: docker/setup-buildx-action@v2
+
+      - name: Create & push DockerHub manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+
+      - name: Create & push GHCR manifest
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
+            ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            ${{ env.REPO_GHCR }}:$TAG-arm64
+
+# ===========================================================
+# ⭐ 新增部分：导出阶段（无论是否构建都执行）
+# ===========================================================
+
+  # ------------------------
+  # 4. 合流节点：保证 export 一定执行
+  # ------------------------
   manifest-final:
     needs: [manifest-after-build, manifest-skip]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Manifest finalized."
+      - run: echo "Manifest completed."
 
-  # 5a. 导出 amd64 产物
+  # ------------------------
+  # 5a. 在 amd64 平台导出产物
+  # ------------------------
   export-amd64:
     needs: [set-tag, manifest-final]
     if: always()
@@ -99,33 +232,32 @@ jobs:
           password: ${{ secrets.GITHUBTOKEN }}
           registry: ghcr.io
 
-      - name: Pull amd64
+      - name: Pull amd64 image
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
 
-      - name: Export amd64 artifacts
+      - name: Extract artifacts
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-
-          mkdir -p exports/backend exports/frontend
-
+          mkdir -p backend frontend
           CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-amd64)
-          docker cp $CID:/ammds/ammds exports/backend/
-          docker cp $CID:/usr/share/nginx/html exports/frontend/
+          docker cp $CID:/ammds/ammds backend/
+          docker cp $CID:/usr/share/nginx/html frontend/
           docker rm $CID
+          tar -czf ammds-amd64-backend.tar.gz -C backend .
+          tar -czf ammds-amd64-frontend.tar.gz -C frontend .
 
-          tar -czf ammds-amd64-backend.tar.gz -C exports/backend .
-          tar -czf ammds-amd64-frontend.tar.gz -C exports/frontend .
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ammds-amd64-artifacts
-          path: |
+          files: |
             ammds-amd64-backend.tar.gz
             ammds-amd64-frontend.tar.gz
 
-  # 5b. 导出 arm64 产物
+  # ------------------------
+  # 5b. 在 arm64 平台导出产物
+  # ------------------------
   export-arm64:
     needs: [set-tag, manifest-final]
     if: always()
@@ -138,28 +270,25 @@ jobs:
           password: ${{ secrets.GITHUBTOKEN }}
           registry: ghcr.io
 
-      - name: Pull arm64
+      - name: Pull arm64 image
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           docker pull ${{ env.REPO_GHCR }}:$TAG-arm64
 
-      - name: Export arm64 artifacts
+      - name: Extract artifacts
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-
-          mkdir -p exports/backend exports/frontend
-
+          mkdir -p backend frontend
           CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-arm64)
-          docker cp $CID:/ammds/ammds exports/backend/
-          docker cp $CID:/usr/share/nginx/html exports/frontend/
+          docker cp $CID:/ammds/ammds backend/
+          docker cp $CID:/usr/share/nginx/html frontend/
           docker rm $CID
+          tar -czf ammds-arm64-backend.tar.gz -C backend .
+          tar -czf ammds-arm64-frontend.tar.gz -C frontend .
 
-          tar -czf ammds-arm64-backend.tar.gz -C exports/backend .
-          tar -czf ammds-arm64-frontend.tar.gz -C exports/frontend .
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ammds-arm64-artifacts
-          path: |
+          files: |
             ammds-arm64-backend.tar.gz
             ammds-arm64-frontend.tar.gz
