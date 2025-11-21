@@ -242,9 +242,8 @@ jobs:
           docker cp $CID:/ammds/ammds backend/
           docker cp $CID:/usr/share/nginx/html frontend/
           docker rm $CID
-          find frontend -type l ! -exec test -e {} \; -delete
-          tar -czf ammds-amd64-backend.tar.gz -C backend .
-          tar -czf ammds-amd64-frontend.tar.gz -C frontend .
+          tar --ignore-failed-read -czf ammds-amd64-backend.tar.gz -C backend .
+          tar --ignore-failed-read -czf ammds-amd64-frontend.tar.gz -C frontend .
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
@@ -277,9 +276,8 @@ jobs:
           docker cp $CID:/ammds/ammds backend/
           docker cp $CID:/usr/share/nginx/html frontend/
           docker rm $CID
-          find frontend -type l ! -exec test -e {} \; -delete
-          tar -czf ammds-arm64-backend.tar.gz -C backend .
-          tar -czf ammds-arm64-frontend.tar.gz -C frontend .
+          tar --ignore-failed-read -czf ammds-amd64-backend.tar.gz -C backend .
+          tar --ignore-failed-read -czf ammds-amd64-frontend.tar.gz -C frontend .
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
