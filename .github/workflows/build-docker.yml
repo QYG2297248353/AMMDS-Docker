@@ -232,21 +232,41 @@ jobs:
           registry: ghcr.io
       - name: Pull amd64 image
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
+          echo "Pulling image $IMAGE"
+          docker pull "$IMAGE"
       - name: Extract artifacts
         run: |
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
+          echo "Using TAG=$TAG, IMAGE=$IMAGE"
           mkdir -p ammds-amd64-backend ammds-amd64-frontend
+  
+          # 排除文件
           EXCLUDE_FILES=("poweredby.png" "system_noindex_logo.png")
-          EXCLUDE_ARGS=""
+          EXCLUDE_ARGS=()
           for f in "${EXCLUDE_FILES[@]}"; do
-              EXCLUDE_ARGS+=" --exclude='./$f'"
+              EXCLUDE_ARGS+=(--exclude="./$f")
           done
-          CID=$(docker create --platform linux/amd64 ${{ env.REPO_GHCR }}:$TAG-amd64)
-          docker cp $CID:/ammds/ammds ammds-amd64-backend/
-          docker start $CID
-          docker exec $CID tar -C /usr/share/nginx/html $EXCLUDE_ARGS -cf - . | tar -C ./ammds-amd64-frontend -xf -
-          docker rm $CID
+  
+          # 创建容器
+          CID=$(docker create --platform linux/amd64 "$IMAGE")
+          echo "Container ID: $CID"
+  
+          # 拷贝后端
+          docker cp "$CID":/ammds/ammds ./ammds-amd64-backend/
+  
+          # 启动容器
+          docker start "$CID"
+  
+          # 导出前端，安全传递排除参数
+          docker exec "$CID" tar -C /usr/share/nginx/html "${EXCLUDE_ARGS[@]}" -cf - . | tar -C ./ammds-amd64-frontend -xf -
+  
+          # 清理容器
+          docker rm "$CID"
+  
+          # 打包产物
           tar -czf ammds-amd64-backend.tar.gz -C ammds-amd64-backend .
           tar -czf ammds-amd64-frontend.tar.gz -C ammds-amd64-frontend .
       - name: Upload to release
@@ -255,7 +275,7 @@ jobs:
           files: |
             ammds-amd64-backend.tar.gz
             ammds-amd64-frontend.tar.gz
-
+  
   # ------------------------
   # 5b. 在 arm64 平台导出产物
   # ------------------------
@@ -271,21 +291,32 @@ jobs:
           registry: ghcr.io
       - name: Pull arm64 image
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          docker pull --platform linux/arm64 ${{ env.REPO_GHCR }}:$TAG-arm64
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          echo "Pulling image $IMAGE"
+          docker pull --platform linux/arm64 "$IMAGE"
       - name: Extract artifacts
         run: |
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          echo "Using TAG=$TAG, IMAGE=$IMAGE"
           mkdir -p ammds-arm64-backend ammds-arm64-frontend
+  
           EXCLUDE_FILES=("poweredby.png" "system_noindex_logo.png")
-          EXCLUDE_ARGS=""
+          EXCLUDE_ARGS=()
           for f in "${EXCLUDE_FILES[@]}"; do
-              EXCLUDE_ARGS+=" --exclude='./$f'"
+              EXCLUDE_ARGS+=(--exclude="./$f")
           done
-          CID=$(docker create --platform linux/arm64 ${{ env.REPO_GHCR }}:$TAG-arm64)
-          docker cp $CID:/ammds/ammds ammds-arm64-backend/
-          docker start $CID
-          docker exec $CID tar -C /usr/share/nginx/html $EXCLUDE_ARGS -cf - . | tar -C ./ammds-arm64-frontend -xf -
-          docker rm $CID
+  
+          CID=$(docker create --platform linux/arm64 "$IMAGE")
+          echo "Container ID: $CID"
+  
+          docker cp "$CID":/ammds/ammds ./ammds-arm64-backend/
+  
+          docker start "$CID"
+          docker exec "$CID" tar -C /usr/share/nginx/html "${EXCLUDE_ARGS[@]}" -cf - . | tar -C ./ammds-arm64-frontend -xf -
+          docker rm "$CID"
+  
           tar -czf ammds-arm64-backend.tar.gz -C ammds-arm64-backend .
           tar -czf ammds-arm64-frontend.tar.gz -C ammds-arm64-frontend .
       - name: Upload to release
@@ -294,3 +325,4 @@ jobs:
           files: |
             ammds-arm64-backend.tar.gz
             ammds-arm64-frontend.tar.gz
+
