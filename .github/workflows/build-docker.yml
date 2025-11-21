@@ -237,13 +237,13 @@ jobs:
       - name: Extract artifacts
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          mkdir -p backend frontend
+          mkdir -p ammds-amd64-backend ammds-amd64-frontend
           CID=$(docker create --platform linux/amd64 ${{ env.REPO_GHCR }}:$TAG-amd64)
-          docker cp $CID:/ammds/ammds backend/
-          docker cp $CID:/usr/share/nginx/html frontend/
+          docker cp $CID:/ammds/ammds ammds-amd64-backend/
+          docker cp $CID:/usr/share/nginx/html ammds-amd64-frontend/ || true
           docker rm $CID
-          tar --ignore-failed-read -czf ammds-amd64-backend.tar.gz -C backend .
-          tar --ignore-failed-read -czf ammds-amd64-frontend.tar.gz -C frontend .
+          tar -czf ammds-amd64-backend.tar.gz -C ammds-amd64-backend .
+          tar -czf ammds-amd64-frontend.tar.gz -C ammds-amd64-frontend .
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
@@ -271,13 +271,13 @@ jobs:
       - name: Extract artifacts
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          mkdir -p backend frontend
+          mkdir -p ammds-arm64-backend ammds-arm64-frontend
           CID=$(docker create --platform linux/arm64 ${{ env.REPO_GHCR }}:$TAG-arm64)
-          docker cp $CID:/ammds/ammds backend/
-          docker cp $CID:/usr/share/nginx/html frontend/
+          docker cp $CID:/ammds/ammds ammds-arm64-backend/
+          docker cp $CID:/usr/share/nginx/html ammds-arm64-frontend/ || true
           docker rm $CID
-          tar --ignore-failed-read -czf ammds-amd64-backend.tar.gz -C backend .
-          tar --ignore-failed-read -czf ammds-amd64-frontend.tar.gz -C frontend .
+          tar -czf ammds-arm64-backend.tar.gz -C ammds-arm64-backend .
+          tar -czf ammds-arm64-frontend.tar.gz -C ammds-arm64-frontend .
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
