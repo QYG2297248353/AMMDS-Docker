@@ -321,6 +321,16 @@ height="50"
 style="border-radius:50%;margin:5px;"
 alt="825824004">
 </a>
+<a href="mailto:yaoqiao@qq.com" 
+title="yaoqiao@qq.com"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://q.qlogo.cn/g?b=qq&nk=yaoqiao&s=640" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="yaoqiao@qq.com">
+</a>
 </div>
 
 ---
