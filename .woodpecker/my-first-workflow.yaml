@@ -13,3 +13,9 @@ steps:
     commands:
       - echo "Testing ..."
       - ./executable
+
+services:
+   - name: docker
+     image: docker:dind
+     commands: dockerd-entrypoint.sh --storage-driver=vfs --tls=false
++    privileged: true
