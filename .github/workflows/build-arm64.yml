@@ -9,8 +9,8 @@ on:
         default: 'dev-arm64'
 
 env:
-  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
-  REPO_GHCR:      ghcr.io/qyg2297248353/ammds
+  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds-dev
+  REPO_GHCR:      ghcr.io/qyg2297248353/ammds-dev
 
 jobs:
   build-arm64:
