@@ -37,10 +37,13 @@ jobs:
           fi
 
 # =====================================================
-# 2️⃣ 构建 amd64（唯一 native-image）
+# 2️⃣ amd64 native 构建
 # =====================================================
   build-amd64:
     needs: set-tag
+    if: >
+      github.event_name != 'release' ||
+      github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -79,10 +82,13 @@ jobs:
           cache-to: type=gha,mode=max
 
 # =====================================================
-# 3️⃣ 构建 arm64
+# 3️⃣ arm64 runtime 构建
 # =====================================================
   build-arm64:
     needs: [ set-tag, build-amd64 ]
+    if: >
+      github.event_name != 'release' ||
+      github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -121,10 +127,13 @@ jobs:
           cache-to: type=gha,mode=max
 
 # =====================================================
-# 4️⃣ 合并 multi-arch manifest
+# 4️⃣ manifest 合并
 # =====================================================
   manifest:
     needs: [ set-tag, build-amd64, build-arm64 ]
+    if: >
+      github.event_name != 'release' ||
+      github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -157,10 +166,13 @@ jobs:
             ${{ env.REPO_GHCR }}:$TAG-arm64
 
 # =====================================================
-# 5️⃣ 导出 backend 产物
+# 5️⃣ 导出产物
 # =====================================================
   export:
     needs: [ set-tag, manifest ]
+    if: >
+      github.event_name != 'release' ||
+      github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -180,7 +192,7 @@ jobs:
           docker rm "$CID"
           tar -czf ammds-amd64-backend.tar.gz -C out/amd64 .
 
-      - name: Export arm64 backend (from amd64 image)
+      - name: Export arm64 backend
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           IMAGE=${{ env.REPO_GHCR }}:$TAG-amd64
