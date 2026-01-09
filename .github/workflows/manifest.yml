@@ -1,0 +1,128 @@
+name: Build & Publish Docker Images
+
+on:
+  push:
+    branches: [ release ]
+  release:
+    types: [ created ]
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: '镜像标签（如 v1.6.10）'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
+  REPO_GHCR:      ghcr.io/qyg2297248353/ammds
+
+jobs:
+  # ------------------------
+  # 1. 统一计算 tag
+  # ------------------------
+  set-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.calc_tag.outputs.tag }}
+    steps:
+      - id: calc_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            BRANCH=${GITHUB_REF#refs/heads/}
+            echo "tag=$BRANCH" >> $GITHUB_OUTPUT
+          fi
+
+  # ------------------------
+  # 2. 检查 amd64 / arm64 镜像是否存在
+  # ------------------------
+  check-images:
+    needs: set-tag
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v2
+
+      - id: check
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+
+          AMD="${{ env.REPO_DOCKERHUB }}:${TAG}-amd64"
+          ARM="${{ env.REPO_DOCKERHUB }}:${TAG}-arm64"
+
+          AMD_OK=$(docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 && echo yes || echo no)
+          ARM_OK=$(docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 && echo yes || echo no)
+
+          if [[ "$AMD_OK" == "yes" && "$ARM_OK" == "yes" ]]; then
+            echo "ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "Required images not found: $AMD_OK / $ARM_OK"
+            exit 1
+          fi
+
+  # ------------------------
+  # 3. 合并 manifest 并推送 tag / latest
+  # ------------------------
+  publish-manifest:
+    needs: [set-tag, check-images]
+    if: needs.check-images.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - uses: docker/setup-buildx-action@v2
+
+      # DockerHub: tag
+      - name: DockerHub manifest (tag)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+
+      # DockerHub: latest
+      - name: DockerHub manifest (latest)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_DOCKERHUB }}:latest \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
+            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
+
+      # GHCR: tag
+      - name: GHCR manifest (tag)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_GHCR }}:$TAG \
+            ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            ${{ env.REPO_GHCR }}:$TAG-arm64
+
+      # GHCR: latest
+      - name: GHCR manifest (latest)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_GHCR }}:latest \
+            ${{ env.REPO_GHCR }}:$TAG-amd64 \
+            ${{ env.REPO_GHCR }}:$TAG-arm64
