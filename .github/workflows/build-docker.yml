@@ -17,9 +17,10 @@ env:
   REPO_GHCR:      ghcr.io/qyg2297248353/ammds
 
 jobs:
+  # ------------------------
   # 1. 统一计算 tag
+  # ------------------------
   set-tag:
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.calc_tag.outputs.tag }}
@@ -35,10 +36,11 @@ jobs:
             echo "tag=$BRANCH" >> $GITHUB_OUTPUT
           fi
 
-  # 1.5 检查两个架构镜像是否都已存在
+  # ------------------------
+  # 1.5 检查镜像是否已存在
+  # ------------------------
   check-images:
     needs: set-tag
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
     outputs:
       skip_build: ${{ steps.check.outputs.skip_build }}
@@ -59,20 +61,18 @@ jobs:
           AMD_OK=$(docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 && echo yes || echo no)
           ARM_OK=$(docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 && echo yes || echo no)
 
-          echo "AMD_OK=$AMD_OK, ARM_OK=$ARM_OK"
           if [[ "$AMD_OK" == "yes" && "$ARM_OK" == "yes" ]]; then
             echo "skip_build=true" >> $GITHUB_OUTPUT
           else
             echo "skip_build=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Debug skip_build
-        run: echo "skip_build=${{ steps.check.outputs.skip_build }}"
-
-  # 2a. 并行：构建 amd64（若 skip_build=false）
+  # ------------------------
+  # 2a. 构建 amd64（若 skip_build=false）
+  # ------------------------
   build-amd64:
     needs: [ set-tag, check-images ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'false'
+    if: needs.check-images.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -102,10 +102,12 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64
 
-  # 2b. 并行：构建 arm64（若 skip_build=false）
+  # ------------------------
+  # 2b. 构建 arm64（若 skip_build=false）
+  # ------------------------
   build-arm64:
     needs: [ set-tag, check-images ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'false'
+    if: needs.check-images.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -135,10 +137,12 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64
 
-  # 3a. 如果跳过构建（skip_build=true），立刻合并 manifest
+  # ------------------------
+  # 3a. 跳过构建时立即合并 manifest
+  # ------------------------
   manifest-skip:
     needs: [ set-tag, check-images ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'true'
+    if: needs.check-images.outputs.skip_build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -158,9 +162,6 @@ jobs:
           docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
@@ -168,14 +169,13 @@ jobs:
           docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
 
-  # 3b. 如果没跳过（skip_build=false），等两架构构建完成后再合并
+  # ------------------------
+  # 3b. 构建后合并 manifest
+  # ------------------------
   manifest-after-build:
     needs: [ set-tag, check-images, build-amd64, build-arm64 ]
-    if: github.event_name == 'release' && github.event.release.target_commitish == 'master' && needs.check-images.outputs.skip_build == 'false'
+    if: needs.check-images.outputs.skip_build == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -195,9 +195,6 @@ jobs:
           docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:latest \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
-            ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
       - name: Create & push GHCR manifest
         run: |
@@ -205,12 +202,27 @@ jobs:
           docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_GHCR }}:$TAG-amd64 \
             ${{ env.REPO_GHCR }}:$TAG-arm64
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:latest \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
-  # 4. 导出构建产物
-  export-artifacts:
-    needs: manifest-after-build
+
+# ===========================================================
+# ⭐ 新增部分：导出阶段（无论是否构建都执行）
+# ===========================================================
+
+  # ------------------------
+  # 4. 合流节点：保证 export 一定执行
+  # ------------------------
+  manifest-final:
+    needs: [manifest-after-build, manifest-skip]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Manifest completed."
+  
+  # ------------------------
+  # 5a. 在 amd64 平台导出产物
+  # ------------------------
+  export-amd64:
+    needs: [set-tag, manifest-final]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: docker/login-action@v2
@@ -218,44 +230,66 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
           registry: ghcr.io
-  
-      - name: Pull final amd64 image
+      - name: Pull amd64 image
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          docker pull ${{ env.REPO_GHCR }}:$TAG-amd64
-  
-      - name: Pull final arm64 image
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
+          echo "Pulling image $IMAGE"
+          docker pull "$IMAGE"
+      - name: Extract backend artifacts
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          docker pull ${{ env.REPO_GHCR }}:$TAG-arm64
-  
-      - name: Export backend and frontend from amd64
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
+          echo "Using TAG=$TAG, IMAGE=$IMAGE"
+          mkdir -p ammds-amd64-backend
+          CID=$(docker create --platform linux/amd64 "$IMAGE")
+          echo "Container ID: $CID"
+          docker cp "$CID":/ammds/ammds ./ammds-amd64-backend/
+          docker rm "$CID"
+      - name: Package backend
         run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          mkdir -p exports/amd64/backend exports/amd64/frontend
-          CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-amd64)
-          docker cp $CID:/ammds/ammds exports/amd64/backend/
-          docker cp $CID:/usr/share/nginx/html exports/amd64/frontend/
-          docker rm $CID
-  
-      - name: Export backend and frontend from arm64
-        run: |
-          TAG=${{ needs.set-tag.outputs.tag }}
-          mkdir -p exports/arm64/backend exports/arm64/frontend
-          CID=$(docker create ${{ env.REPO_GHCR }}:$TAG-arm64)
-          docker cp $CID:/ammds/ammds exports/arm64/backend/
-          docker cp $CID:/usr/share/nginx/html exports/arm64/frontend/
-          docker rm $CID
-  
-      - name: Compress artifacts
-        run: |
-          tar -czf exports/amd64-backend.tar.gz -C exports/amd64/backend .
-          tar -czf exports/amd64-frontend.tar.gz -C exports/amd64/frontend .
-          tar -czf exports/arm64-backend.tar.gz -C exports/arm64/backend .
-          tar -czf exports/arm64-frontend.tar.gz -C exports/arm64/frontend .
-  
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+          tar -czf ammds-amd64-backend.tar.gz -C ammds-amd64-backend .
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
         with:
-          name: ammds-artifacts
-          path: exports/*.tar.gz
+          files: |
+            ammds-amd64-backend.tar.gz
+  
+  # ------------------------
+  # 5b. 在 arm64 平台导出产物
+  # ------------------------
+  export-arm64:
+    needs: [set-tag, manifest-final]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+          registry: ghcr.io
+      - name: Pull arm64 image
+        run: |
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          echo "Pulling image $IMAGE"
+          docker pull --platform linux/arm64 "$IMAGE"
+      - name: Extract backend artifacts
+        run: |
+          TAG=$(echo "${{ needs.set-tag.outputs.tag }}" | tr -d '\n\r')
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          echo "Using TAG=$TAG, IMAGE=$IMAGE"
+          mkdir -p ammds-arm64-backend
+          CID=$(docker create --platform linux/arm64 "$IMAGE")
+          echo "Container ID: $CID"
+          docker cp "$CID":/ammds/ammds ./ammds-arm64-backend/
+          docker rm "$CID"
+      - name: Package backend
+        run: |
+          tar -czf ammds-arm64-backend.tar.gz -C ammds-arm64-backend .
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ammds-arm64-backend.tar.gz
+
