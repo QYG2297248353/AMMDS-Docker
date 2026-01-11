@@ -150,16 +150,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull amd64 image
+      - name: Pull amd64 image (from manifest)
         run: |
           TAG="${{ needs.set-tag.outputs.tag }}"
-          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
-          docker pull "$IMAGE"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}"
+          docker pull --platform linux/amd64 "$IMAGE"
 
       - name: Extract backend artifacts
         run: |
           TAG="${{ needs.set-tag.outputs.tag }}"
-          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}"
           mkdir -p ammds-amd64-backend
           CID=$(docker create --platform linux/amd64 "$IMAGE")
           docker cp "$CID":/ammds/ammds ./ammds-amd64-backend/
@@ -188,16 +188,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull arm64 image
+      - name: Pull arm64 image (from manifest)
         run: |
           TAG="${{ needs.set-tag.outputs.tag }}"
-          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}"
           docker pull --platform linux/arm64 "$IMAGE"
 
       - name: Extract backend artifacts
         run: |
           TAG="${{ needs.set-tag.outputs.tag }}"
-          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}"
           mkdir -p ammds-arm64-backend
           CID=$(docker create --platform linux/arm64 "$IMAGE")
           docker cp "$CID":/ammds/ammds ./ammds-arm64-backend/
