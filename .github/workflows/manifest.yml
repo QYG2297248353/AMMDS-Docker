@@ -18,7 +18,7 @@ env:
 
 jobs:
   # ------------------------
-  # 1. 统一计算 tag
+  # 计算 Tag
   # ------------------------
   set-tag:
     runs-on: ubuntu-latest
@@ -37,7 +37,7 @@ jobs:
           fi
 
   # ------------------------
-  # 2. 只检查 Docker Hub 上的架构镜像是否存在
+  # 检查 Docker Hub 镜像
   # ------------------------
   check-images:
     needs: set-tag
@@ -68,10 +68,10 @@ jobs:
           echo "ready=true" >> $GITHUB_OUTPUT
 
   # ------------------------
-  # 3. 合并 DockerHub manifest + 同步到 GHCR
+  # 合并 DockerHub Manifest 并同步 GHCR
   # ------------------------
   publish-manifest:
-    needs: [set-tag, check-images]
+    needs: [ set-tag, check-images ]
     if: needs.check-images.outputs.ready == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -88,9 +88,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@v2
 
-      # ------------------------
       # Docker Hub: TAG
-      # ------------------------
       - name: DockerHub manifest (tag)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
@@ -99,9 +97,7 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
-      # ------------------------
       # Docker Hub: latest
-      # ------------------------
       - name: DockerHub manifest (latest)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
@@ -110,9 +106,7 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
-      # ------------------------
-      # GHCR: TAG（直接从 DockerHub 复制）
-      # ------------------------
+      # GHCR: TAG（从 DockerHub 复制）
       - name: GHCR manifest (tag)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
@@ -120,12 +114,100 @@ jobs:
             --tag ${{ env.REPO_GHCR }}:$TAG \
             ${{ env.REPO_DOCKERHUB }}:$TAG
 
-      # ------------------------
       # GHCR: latest
-      # ------------------------
       - name: GHCR manifest (latest)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           docker buildx imagetools create \
             --tag ${{ env.REPO_GHCR }}:latest \
             ${{ env.REPO_DOCKERHUB }}:$TAG
+
+  # ===========================================================
+  # 导出产物
+  # ===========================================================
+
+  # ------------------------
+  # 合流节点
+  # ------------------------
+  manifest-final:
+    needs: [ publish-manifest ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Manifest completed."
+
+  # ------------------------
+  # 导出 AMD64 产物
+  # ------------------------
+  export-amd64:
+    needs: [ set-tag, manifest-final ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull amd64 image
+        run: |
+          TAG="${{ needs.set-tag.outputs.tag }}"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
+          docker pull "$IMAGE"
+
+      - name: Extract backend artifacts
+        run: |
+          TAG="${{ needs.set-tag.outputs.tag }}"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-amd64"
+          mkdir -p ammds-amd64-backend
+          CID=$(docker create --platform linux/amd64 "$IMAGE")
+          docker cp "$CID":/ammds/ammds ./ammds-amd64-backend/
+          docker rm "$CID"
+
+      - name: Package backend
+        run: |
+          tar -czf ammds-amd64-backend.tar.gz -C ammds-amd64-backend .
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ammds-amd64-backend.tar.gz
+
+  # ------------------------
+  # 导出 ARM64 产物
+  # ------------------------
+  export-arm64:
+    needs: [ set-tag, manifest-final ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull arm64 image
+        run: |
+          TAG="${{ needs.set-tag.outputs.tag }}"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          docker pull --platform linux/arm64 "$IMAGE"
+
+      - name: Extract backend artifacts
+        run: |
+          TAG="${{ needs.set-tag.outputs.tag }}"
+          IMAGE="${{ env.REPO_GHCR }}:${TAG}-arm64"
+          mkdir -p ammds-arm64-backend
+          CID=$(docker create --platform linux/arm64 "$IMAGE")
+          docker cp "$CID":/ammds/ammds ./ammds-arm64-backend/
+          docker rm "$CID"
+
+      - name: Package backend
+        run: |
+          tar -czf ammds-arm64-backend.tar.gz -C ammds-arm64-backend .
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ammds-arm64-backend.tar.gz
