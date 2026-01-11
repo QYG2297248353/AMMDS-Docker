@@ -37,7 +37,7 @@ jobs:
           fi
 
   # ------------------------
-  # 2. 检查 amd64 / arm64 镜像是否存在
+  # 2. 只检查 Docker Hub 上的架构镜像是否存在
   # ------------------------
   check-images:
     needs: set-tag
@@ -59,19 +59,16 @@ jobs:
           AMD="${{ env.REPO_DOCKERHUB }}:${TAG}-amd64"
           ARM="${{ env.REPO_DOCKERHUB }}:${TAG}-arm64"
 
-          AMD_OK=$(docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 && echo yes || echo no)
-          ARM_OK=$(docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 && echo yes || echo no)
+          echo "Checking $AMD"
+          docker buildx imagetools inspect "$AMD" > /dev/null 2>&1 || exit 1
 
-          if [[ "$AMD_OK" == "yes" && "$ARM_OK" == "yes" ]]; then
-            echo "ready=true" >> $GITHUB_OUTPUT
-          else
-            echo "ready=false" >> $GITHUB_OUTPUT
-            echo "Required images not found: $AMD_OK / $ARM_OK"
-            exit 1
-          fi
+          echo "Checking $ARM"
+          docker buildx imagetools inspect "$ARM" > /dev/null 2>&1 || exit 1
+
+          echo "ready=true" >> $GITHUB_OUTPUT
 
   # ------------------------
-  # 3. 合并 manifest 并推送 tag / latest
+  # 3. 合并 DockerHub manifest + 同步到 GHCR
   # ------------------------
   publish-manifest:
     needs: [set-tag, check-images]
@@ -87,11 +84,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUBTOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: docker/setup-buildx-action@v2
 
-      # DockerHub: tag
+      # ------------------------
+      # Docker Hub: TAG
+      # ------------------------
       - name: DockerHub manifest (tag)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
@@ -100,7 +99,9 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
-      # DockerHub: latest
+      # ------------------------
+      # Docker Hub: latest
+      # ------------------------
       - name: DockerHub manifest (latest)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
@@ -109,20 +110,22 @@ jobs:
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64
 
-      # GHCR: tag
+      # ------------------------
+      # GHCR: TAG（直接从 DockerHub 复制）
+      # ------------------------
       - name: GHCR manifest (tag)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           docker buildx imagetools create \
             --tag ${{ env.REPO_GHCR }}:$TAG \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
+            ${{ env.REPO_DOCKERHUB }}:$TAG
 
+      # ------------------------
       # GHCR: latest
+      # ------------------------
       - name: GHCR manifest (latest)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
           docker buildx imagetools create \
             --tag ${{ env.REPO_GHCR }}:latest \
-            ${{ env.REPO_GHCR }}:$TAG-amd64 \
-            ${{ env.REPO_GHCR }}:$TAG-arm64
+            ${{ env.REPO_DOCKERHUB }}:$TAG
