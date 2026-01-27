@@ -1,0 +1,54 @@
+# =====================================================
+# 构建 arm64 并推送 DockerHub
+# =====================================================
+when:
+  branch:
+    - master
+  event:
+    - tag
+    - manual
+  ref: refs/tags/v*
+
+skip_clone: true
+
+steps:
+  - name: ammds-git-clone
+    image: woodpeckerci/plugin-git
+    settings:
+      remote: https://github.com/QYG2297248353/AMMDS.git
+      depth: 1
+      attempts: 5
+      lfs: false
+      branch: master
+      ref: refs/tags/${CI_COMMIT_TAG}
+      path: ammds-arm64-ol8
+      recursive: false
+
+  - name: ammds-build-arm64
+    image: woodpeckerci/plugin-docker-buildx
+    privileged: true
+    volumes:
+      - /shares/docker/cache/buildkit-cache-arm64-ol8:/buildkit-cache
+    settings:
+      platforms: linux/arm64
+      context: ./ammds-arm64-ol8
+      dockerfile: ./ammds-arm64-ol8/Dockerfile-Woodpecker-ol8
+      repo:
+        - docker.io/qyg2297248353/ammds
+      tags:
+        - ${CI_COMMIT_TAG}-arm64-ol8
+      push: true
+      pull_image: false
+      custom_dns:
+        - 223.5.5.5
+        - 119.29.29.29
+      cache_from:
+        - type=local\\,src=/buildkit-cache
+      cache_to: type=local,dest=/buildkit-cache,mode=max
+      logins:
+        - registry: https://index.docker.io/v1/
+          username:
+            from_secret: DOCKERHUB_USERNAME
+          password:
+            from_secret: DOCKERHUB_TOKEN
+      purge: false
