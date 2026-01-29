@@ -80,26 +80,28 @@ jobs:
           git lfs install --skip-smudge
           git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
           cd source && git lfs pull --exclude="*"
+
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
+
       - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
+
       - name: Build & push amd64 ol8
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/Dockerfile-ol8
           platforms: linux/amd64
           push: true
-          build-args: |
-            BASE_OS=oraclelinux:8
           tags: |
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64-ol8
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64-ol8
@@ -117,26 +119,28 @@ jobs:
           git lfs install --skip-smudge
           git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
           cd source && git lfs pull --exclude="*"
+
       - uses: docker/setup-qemu-action@v2
       - uses: docker/setup-buildx-action@v2
+
       - uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
+
       - name: Build & push arm64 ol8
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/Dockerfile-ol8
           platforms: linux/arm64
           push: true
-          build-args: |
-            BASE_OS=oraclelinux:8
           tags: |
             ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64-ol8
             ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64-ol8
@@ -153,22 +157,30 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
+
       - uses: docker/setup-buildx-action@v2
+
       - name: Create & push DockerHub manifest (ol8)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG-ol8 \
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_DOCKERHUB }}:$TAG-ol8 \
+            --tag ${{ env.REPO_DOCKERHUB }}:latest-ol8 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64-ol8 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64-ol8
+
       - name: Create & push GHCR manifest (ol8)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG-ol8 \
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_GHCR }}:$TAG-ol8 \
+            --tag ${{ env.REPO_GHCR }}:latest-ol8 \
             ${{ env.REPO_GHCR }}:$TAG-amd64-ol8 \
             ${{ env.REPO_GHCR }}:$TAG-arm64-ol8
 
@@ -184,21 +196,29 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUBTOKEN }}
+
       - uses: docker/setup-buildx-action@v2
+
       - name: Create & push DockerHub manifest (ol8)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_DOCKERHUB }}:$TAG-ol8 \
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_DOCKERHUB }}:$TAG-ol8 \
+            --tag ${{ env.REPO_DOCKERHUB }}:latest-ol8 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-amd64-ol8 \
             ${{ env.REPO_DOCKERHUB }}:$TAG-arm64-ol8
+
       - name: Create & push GHCR manifest (ol8)
         run: |
           TAG=${{ needs.set-tag.outputs.tag }}
-          docker buildx imagetools create --tag ${{ env.REPO_GHCR }}:$TAG-ol8 \
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_GHCR }}:$TAG-ol8 \
+            --tag ${{ env.REPO_GHCR }}:latest-ol8 \
             ${{ env.REPO_GHCR }}:$TAG-amd64-ol8 \
             ${{ env.REPO_GHCR }}:$TAG-arm64-ol8
