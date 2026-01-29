@@ -1,0 +1,133 @@
+name: Build & Publish Docker Images (OL8)
+
+on:
+  push:
+    branches: [ release ]
+  release:
+    types: [ created ]
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: '镜像标签（如 v1.6.10）'
+        required: true
+        default: 'v1.0.0'
+
+env:
+  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
+  REPO_GHCR:      ghcr.io/qyg2297248353/ammds
+
+jobs:
+  # ------------------------
+  # 计算 Tag
+  # ------------------------
+  set-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.calc_tag.outputs.tag }}
+    steps:
+      - id: calc_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            BRANCH=${GITHUB_REF#refs/heads/}
+            echo "tag=$BRANCH" >> $GITHUB_OUTPUT
+          fi
+
+  # ------------------------
+  # 检查 Docker Hub OL8 镜像
+  # ------------------------
+  check-images-ol8:
+    needs: set-tag
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v2
+
+      - id: check
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+
+          AMD_OL8="${{ env.REPO_DOCKERHUB }}:${TAG}-amd64-ol8"
+          ARM_OL8="${{ env.REPO_DOCKERHUB }}:${TAG}-arm64-ol8"
+
+          echo "Checking $AMD_OL8"
+          docker buildx imagetools inspect "$AMD_OL8" > /dev/null 2>&1 || exit 1
+
+          echo "Checking $ARM_OL8"
+          docker buildx imagetools inspect "$ARM_OL8" > /dev/null 2>&1 || exit 1
+
+          echo "ready=true" >> $GITHUB_OUTPUT
+
+  # ------------------------
+  # 合并 DockerHub OL8 Manifest 并同步 GHCR
+  # ------------------------
+  publish-manifest-ol8:
+    needs: [ set-tag, check-images-ol8 ]
+    if: needs.check-images-ol8.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v2
+
+      # Docker Hub: TAG-ol8
+      - name: DockerHub manifest (tag-ol8)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_DOCKERHUB }}:${TAG}-ol8 \
+            ${{ env.REPO_DOCKERHUB }}:${TAG}-amd64-ol8 \
+            ${{ env.REPO_DOCKERHUB }}:${TAG}-arm64-ol8
+
+      # Docker Hub: latest-ol8
+      - name: DockerHub manifest (latest-ol8)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_DOCKERHUB }}:latest-ol8 \
+            ${{ env.REPO_DOCKERHUB }}:${TAG}-amd64-ol8 \
+            ${{ env.REPO_DOCKERHUB }}:${TAG}-arm64-ol8
+
+      # GHCR: TAG-ol8（从 DockerHub 复制）
+      - name: GHCR manifest (tag-ol8)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_GHCR }}:${TAG}-ol8 \
+            ${{ env.REPO_DOCKERHUB }}:${TAG}-ol8
+
+      # GHCR: latest-ol8
+      - name: GHCR manifest (latest-ol8)
+        run: |
+          TAG=${{ needs.set-tag.outputs.tag }}
+          docker buildx imagetools create \
+            --tag ${{ env.REPO_GHCR }}:latest-ol8 \
+            ${{ env.REPO_DOCKERHUB }}:${TAG}-ol8
+
+  # ------------------------
+  # 合流节点
+  # ------------------------
+  manifest-final-ol8:
+    needs: [ publish-manifest-ol8 ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "OL8 manifest completed."
