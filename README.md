@@ -188,6 +188,16 @@ height="50"
 style="border-radius:50%;margin:5px;"
 alt="爱发电用户_09e88">
 </a>
+<a href="https://afdian.com/u/c74380a673fb11eeb30852540025c377" 
+title="爱发电用户_wtbc"
+target="_blank"
+rel="noopener noreferrer">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-orange.png?imageView2/1/w/120/h/120" 
+width="50" 
+height="50" 
+style="border-radius:50%;margin:5px;"
+alt="爱发电用户_wtbc">
+</a>
 <a href="https://afdian.com/u/7a610564308911f0bc8e5254001e7c00" 
 title="嗨咯"
 target="_blank"
@@ -254,6 +264,20 @@ alt="爱发电用户_09e88">
 </a>
 <span style="color: #586069;">
 (1 次支持)
+</span>
+</div>
+<div style="margin-bottom: 8px;">
+<a href="https://afdian.com/u/c74380a673fb11eeb30852540025c377" 
+style="text-decoration: none;">
+<img src="https://pic1.afdiancdn.com/default/avatar/avatar-orange.png?imageView2/1/w/40/h/40" 
+width="20" 
+height="20" 
+style="vertical-align: middle; border-radius: 50%;"
+alt="爱发电用户_wtbc">
+<span style="color: #0366d6;">爱发电用户_wtbc</span>
+</a>
+<span style="color: #586069;">
+(0 次支持)
 </span>
 </div>
 <div style="margin-bottom: 8px;">
