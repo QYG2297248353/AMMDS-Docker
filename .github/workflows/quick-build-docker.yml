@@ -1,0 +1,281 @@
+name: Build & Publish Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: "镜像标签（例如 v1.6.58）"
+        required: true
+        default: "v1.0.0"
+
+env:
+  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds
+  REPO_GHCR: ghcr.io/qyg2297248353/ammds
+
+jobs:
+
+  ########################################################
+  # 计算 Tag
+  ########################################################
+  set-tag:
+    runs-on: ubuntu-latest
+
+    outputs:
+      tag: ${{ steps.calc.outputs.tag }}
+
+    steps:
+      - id: calc
+        run: |
+          echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+
+  ########################################################
+  # AMD64
+  ########################################################
+  build-amd64:
+    needs: set-tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Check image exists
+        id: check
+        run: |
+          IMAGE="${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64"
+
+          if docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image already exists, skip build."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone source
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source
+          git checkout master
+          git lfs pull
+
+      - name: Set up Buildx
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Build & Push AMD64
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./source
+          file: ./source/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            BUILDPLATFORM=linux/amd64
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ########################################################
+  # AMD64 OL8
+  ########################################################
+  build-amd64-ol8:
+    needs: set-tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Check image exists
+        id: check
+        run: |
+          IMAGE="${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64-ol8"
+
+          if docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image already exists, skip build."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone source
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source
+          git checkout master
+          git lfs pull
+
+      - name: Set up Buildx
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Build & Push AMD64 OL8
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./source
+          file: ./source/Dockerfile-ol8
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            BUILDPLATFORM=linux/amd64
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-amd64-ol8
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-amd64-ol8
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ########################################################
+  # ARM64
+  ########################################################
+  build-arm64:
+    needs: set-tag
+    runs-on: ubuntu-22.04-arm
+
+    steps:
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Check image exists
+        id: check
+        run: |
+          IMAGE="${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64"
+
+          if docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image already exists, skip build."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone source
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source
+          git checkout master
+          git lfs pull
+
+      - name: Set up Buildx
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Build & Push ARM64
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./source
+          file: ./source/Dockerfile
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            BUILDPLATFORM=linux/arm64
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ########################################################
+  # ARM64 OL8
+  ########################################################
+  build-arm64-ol8:
+    needs: set-tag
+    runs-on: ubuntu-22.04-arm
+
+    steps:
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Check image exists
+        id: check
+        run: |
+          IMAGE="${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64-ol8"
+
+          if docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image already exists, skip build."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone source
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source
+          git checkout master
+          git lfs pull
+
+      - name: Set up Buildx
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Build & Push ARM64 OL8
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./source
+          file: ./source/Dockerfile-ol8
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            BUILDPLATFORM=linux/arm64
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}-arm64-ol8
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}-arm64-ol8
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
