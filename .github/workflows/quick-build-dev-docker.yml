@@ -1,0 +1,87 @@
+name: Build & Publish Dev Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref_name:
+        description: "镜像标签（例如 v1.6.58）"
+        required: true
+        default: "v1.0.0"
+
+env:
+  REPO_DOCKERHUB: docker.io/qyg2297248353/ammds-dev
+  REPO_GHCR: ghcr.io/qyg2297248353/ammds-dev
+
+jobs:
+
+  ########################################################
+  # 计算 Tag
+  ########################################################
+  set-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.calc.outputs.tag }}
+    steps:
+      - id: calc
+        run: |
+          echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+
+  ########################################################
+  # AMD64（唯一架构，直接用主 tag，无需 manifest 合并）
+  ########################################################
+  build-amd64:
+    needs: set-tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUBTOKEN }}
+
+      - name: Check image exists
+        id: check
+        run: |
+          TAG="${{ needs.set-tag.outputs.tag }}"
+          IMAGE="${{ env.REPO_DOCKERHUB }}:${TAG}"
+
+          if docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "镜像 $IMAGE 已存在，跳过构建。"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone source
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git lfs install --skip-smudge
+          git clone https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/AMMDS.git source
+          cd source
+          git checkout master
+          git lfs pull
+
+      - name: Build & Push AMD64
+        if: steps.check.outputs.exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./source
+          file: ./source/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REPO_DOCKERHUB }}:${{ needs.set-tag.outputs.tag }}
+            ${{ env.REPO_GHCR }}:${{ needs.set-tag.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
