@@ -32,7 +32,7 @@ steps:
     settings:
       platforms: linux/amd64
       context: ./ammds-amd64-ol8
-      dockerfile: ./ammds-amd64-ol8/Dockerfile-Woodpecker-ol8
+      dockerfile: ./ammds-amd64-ol8/docker/Dockerfile-Woodpecker-ol8
       repo:
         - docker.io/qyg2297248353/ammds
       tags:
