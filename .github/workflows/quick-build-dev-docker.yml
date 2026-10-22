@@ -1,4 +1,4 @@
-name: Build & Publish Dev Images
+name: Quick Build & Publish Dev Images
 
 on:
   workflow_dispatch:
@@ -37,32 +37,8 @@ jobs:
           echo "使用镜像版本：$TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-
   ########################################################
   # AMD64
-  #
-  # 逻辑：
-  #
-  # 1. 只检查 DockerHub 的 version tag
-  #
-  # 2. DockerHub version 不存在
-  #      → 构建镜像
-  #
-  # 3. DockerHub version 已存在
-  #      → 不构建
-  #
-  # 4. 无论 version 是否存在
-  #      → 最终都将该版本镜像推送到：
-  #
-  #      DockerHub:
-  #        version
-  #        latest
-  #
-  #      GHCR:
-  #        version
-  #        latest
-  #
-  # 5. latest 永远被当前输入的 version 覆盖
   ########################################################
   build-amd64:
     needs: set-tag
@@ -161,7 +137,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/docker/Dockerfile
 
           platforms: linux/amd64
 
