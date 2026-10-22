@@ -32,7 +32,7 @@ steps:
     settings:
       platforms: linux/amd64
       context: ./ammds-amd64
-      dockerfile: ./ammds-amd64/Dockerfile-Woodpecker
+      dockerfile: ./ammds-amd64/docker/Dockerfile-Woodpecker
       repo:
         - docker.io/qyg2297248353/ammds
       tags:
