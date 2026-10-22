@@ -1,4 +1,4 @@
-name: Build & Publish Images
+name: Quick Build & Publish Images
 
 on:
   workflow_dispatch:
@@ -24,9 +24,18 @@ jobs:
       tag: ${{ steps.calc.outputs.tag }}
 
     steps:
-      - id: calc
+      - name: Calculate tag
+        id: calc
         run: |
-          echo "tag=${{ github.event.inputs.ref_name }}" >> $GITHUB_OUTPUT
+          TAG="${{ github.event.inputs.ref_name }}"
+
+          if [ -z "$TAG" ]; then
+            echo "错误：ref_name 不能为空"
+            exit 1
+          fi
+
+          echo "使用镜像版本：$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
   ########################################################
   # AMD64
@@ -80,7 +89,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/docker/Dockerfile
           platforms: linux/amd64
           push: true
           build-args: |
@@ -143,7 +152,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./source
-          file: ./source/Dockerfile-ol8
+          file: ./source/docker/Dockerfile-ol8
           platforms: linux/amd64
           push: true
           build-args: |
@@ -206,7 +215,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/docker/Dockerfile
           platforms: linux/arm64
           push: true
           build-args: |
@@ -269,7 +278,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./source
-          file: ./source/Dockerfile-ol8
+          file: ./source/docker/Dockerfile-ol8
           platforms: linux/arm64
           push: true
           build-args: |
