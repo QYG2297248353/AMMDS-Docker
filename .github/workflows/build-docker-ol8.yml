@@ -99,7 +99,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile-ol8
+          file: ./source/docker/Dockerfile-ol8
           platforms: linux/amd64
           push: true
           tags: |
@@ -138,7 +138,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile-ol8
+          file: ./source/docker/Dockerfile-ol8
           platforms: linux/arm64
           push: true
           tags: |
