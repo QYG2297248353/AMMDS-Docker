@@ -95,7 +95,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/docker/Dockerfile
           platforms: linux/amd64
           push: true
           tags: |
@@ -130,7 +130,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./source
-          file: ./source/Dockerfile
+          file: ./source/docker/Dockerfile
           platforms: linux/arm64
           push: true
           tags: |
